@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+
+flask = "*"
+"Flask-SQLAlchemy" = "*"
+"Psycopg2" = "*"
+"Flask-Migrate" = "*"
+
+[dev-packages]
+
+pylint = "*"
+pytest = "*"
+"pytest-cov" = "*"
+coveralls = "*"
+
+[requires]
+python_version = "3.6"
