@@ -1,0 +1,14 @@
+# Language and version
+language:
+  - python
+python:
+  - 3.6
+# Install dependecies
+install:
+  - pip install -r requirements.txt
+# Test Script
+script:
+  - pytest --cov=app/ tests/
+# Coveralls reporting
+after_success:
+  - coveralls
