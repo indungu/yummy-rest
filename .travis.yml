@@ -1,6 +1,7 @@
-# Language and version
+# Language
 language:
   - python
+# Supported version
 python:
   - 3.6
 # Install dependecies
