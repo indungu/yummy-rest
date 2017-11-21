@@ -10,7 +10,7 @@ class RoutesTestCase(TestCase):
 
     def setUp(self):
         """Set up tests"""
-        APP.config['SQLALCHEMY_DATABSE_URI'] = 'postgres://indungu:password@localhost:5432/test_db'
+        APP.config['SQLALCHEMY_DATABSE_URI'] = 'postgres://localhost/test_db'
         self.test_api = APP.test_client()
 
         db.create_all()
