@@ -21,8 +21,6 @@ class User(db.Model):
         self.username = username
         self.password = generate_password_hash(password, method='pbkdf2:sha256')
 
-    def __repr__(self):
-        return "<User %r>" % self.username
 
 class Category(db.Model):
     """Categories Model"""

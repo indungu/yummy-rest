@@ -1,13 +1,16 @@
 """The API routes"""
+import sys
 from datetime import datetime, timedelta
 from werkzeug.security import check_password_hash
 from flask import jsonify, request, make_response
 from flask_restplus import Resource
 from flask_jwt import jwt, jwt_required
+
 from app import APP
 from .restplus import API
 from .models import db, User
 from .serializers import add_user, login_user
+
 user_ns = API.namespace('users', description="User administration operations.")
 auth_ns = API.namespace('auth', description="Authentication/Authorization operations.")
 
@@ -39,16 +42,18 @@ class SpecUserHandler(Resource):
         Gets a single user to admin
         """
         user = User.query.filter_by(public_id=public_id).first()
-
+        print(user, file=sys.stdout)
         if not user:
-            return jsonify({"message": "No user found!"})
+            print(user, file=sys.stdout)
+            resp_object = jsonify({"message": "No user found!"})
+            return make_response(resp_object), 204
 
         user_data = {}
         user_data['email'] = user.email
         user_data['password'] = user.password
         user_data['public_id'] = user.public_id
         user_data['username'] = user.username
-        return jsonify({"user": user_data})
+        return make_response(jsonify({"user": user_data}), 200)
     
 
     def delete(self, public_id):
@@ -58,12 +63,12 @@ class SpecUserHandler(Resource):
         user = User.query.filter_by(public_id=public_id).first()
 
         if not user:
-            return jsonify({"message": "No user found!"})
+            return make_response(jsonify({"message": "No user found!"})), 204
 
         db.session.delete(user)
         db.session.commit()
 
-        return jsonify({"message": "User was deleted!"})
+        return make_response(jsonify({"message": "User was deleted!"}), 200)
 
 @auth_ns.route('/register')
 class RegisterHandler(Resource):
@@ -71,7 +76,6 @@ class RegisterHandler(Resource):
     This class handles user account creation.
     """
 
-    @API.response(201, 'User successfully created.')
     @API.expect(add_user)
     def post(self):
         """
@@ -81,7 +85,7 @@ class RegisterHandler(Resource):
         new_user = User(email=data['email'], username=data['username'], password=data['password'])
         db.session.add(new_user)
         db.session.commit()
-        return jsonify({'message': 'New User created!'})
+        return make_response(jsonify({'message': 'New User created!'}), 201)
 
 @auth_ns.route('/login')
 class LoginHandler(Resource):
