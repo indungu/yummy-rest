@@ -111,3 +111,8 @@ class LoginHandler(Resource):
             )
             return jsonify({"access_token": token.decode('UTF-8')})
         return make_response('Could not verify', 401, {'WWW-Authenticate': 'Basic realm="Login require!"'})
+
+# ADD the namespaces created to the API
+API.add_namespace(auth_ns)
+API.add_namespace(user_ns)
+API.init_app(APP)

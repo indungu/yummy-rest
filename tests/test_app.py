@@ -1,18 +1,20 @@
 """Unit testing suite for the app module"""
 from uuid import uuid4
-from unittest import TestCase
+from flask_testing import TestCase
 from flask import json
+from instance.config import app_config
 from app import APP
 from app.models import db, User
 
-class RoutesTestCase(TestCase):
-    """This test class contains the tests for the API endpoints"""
-
+class BaseTestCase(TestCase):
+    """This class is the base of all test cases"""
+    def create_app(self):
+        """creates an app for testing"""
+        APP.config.from_object(app_config['testing'])
+        return APP
+    
     def setUp(self):
         """Set up tests"""
-        APP.config['SQLALCHEMY_DATABSE_URI'] = 'postgresql://localhost/test_db'
-        self.test_api = APP.test_client()
-
         db.create_all()
         db.session.commit()
         
@@ -22,9 +24,13 @@ class RoutesTestCase(TestCase):
         db.session.remove()
         db.drop_all()
 
+class RoutesTestCase(BaseTestCase):
+    """This test class contains the tests for the API endpoints"""
+
+
     def register_user(self, email, username, password):
         """Registers a test user"""
-        return self.test_api.post('/auth/register',
+        return self.client.post('/auth/register',
                                   data=json.dumps(dict(
                                       email=email,
                                       username=username,
@@ -40,16 +46,17 @@ class RoutesTestCase(TestCase):
         """
         # When retieving users from the database 
         # Ensure that if the database has no users
-        response = self.test_api.get('/users', follow_redirects=True, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(b'No user(s) added!', response.data)
-        # add a test user
-        resp_register = self.register_user('isaac@yummy.io', 'isaac', '123pass321')
-        self.assertIn(b'New User created!', resp_register.data)
-        self.assertEqual(resp_register.status_code, 201)
-        # Ensure that added users are added
-        response = self.test_api.get('/users', follow_redirects=True, content_type='application/json')
-        self.assertIn(b'users', response.data)
+        with self.client:
+            response = self.client.get('/users', follow_redirects=True, content_type='application/json')
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b'No user(s) added!', response.data)
+            # add a test user
+            resp_register = self.register_user('isaac@yummy.io', 'isaac', '123pass321')
+            self.assertIn(b'New User created!', resp_register.data)
+            self.assertEqual(resp_register.status_code, 201)
+            # Ensure that added users are added
+            response = self.client.get('/users', follow_redirects=True, content_type='application/json')
+            self.assertIn(b'users', response.data)
 
     def test_single_user_retrival(self):
         """
@@ -57,18 +64,19 @@ class RoutesTestCase(TestCase):
         """
         # retrieve an none existed user
         public_id = str(uuid4())
-        response = self.test_api.get(
+        response = self.client.get(
             '/users/' + public_id,
             content_type="application/json"
         )
-        response_data = json.loads(response.data.decode())
-        self.assertTrue(response.status_code, 204)
-        # add test user
-        self.register_user('isaac@yummy.io', 'isaac', '123pass321')
-        user = User.query.filter_by(email='isaac@yummy.io').first()
-        response = self.test_api.get(
-            '/users/' + user.public_id,
-            content_type="application/json"
-        )
-        self.assertTrue(response.status_code, 200)
-        self.assertIn(user.public_id, str(response.data))
+        with self.client:
+            response_data = json.loads(response.data.decode())
+            self.assertTrue(response.status_code, 204)
+            # add test user
+            self.register_user('isaac@yummy.io', 'isaac', '123pass321')
+            user = User.query.filter_by(email='isaac@yummy.io').first()
+            response = self.client.get(
+                '/users/' + user.public_id,
+                content_type="application/json"
+            )
+            self.assertTrue(response.status_code, 200)
+            self.assertIn(user.public_id, str(response.data))

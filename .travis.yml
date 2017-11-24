@@ -12,8 +12,8 @@ services:
   - postgresql
 # Database setup
 before_script:
-  - psql -c 'create database yummy_rest_db;' -U postgres
-  - psql -c 'create database test_db;' -U postgres
+  - psql -c 'create database yummy_rest;' -U postgres
+  - psql -c 'create database yummy_rest_test;' -U postgres
 # Test Script
 script:
   - pytest --cov=app/ tests/
