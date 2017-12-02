@@ -1,5 +1,6 @@
 """Data models module"""
 import uuid
+from datetime import datetime
 from werkzeug.security import generate_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from app import db
@@ -48,3 +49,29 @@ class Recipe(db.Model):
     name = db.Column(db.String(40), unique=True, nullable=False)
     ingredients = db.Column(db.String(200), nullable=False)
     description = db.Column(db.String(500), nullable=False)
+
+class BlacklistToken(db.Model):
+    """Blacklisted tokens Model"""
+
+    __tablename__ = "blacklist"
+
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(500), nullable=False, unique=True)
+    blacklisted_on = db.Column(db.DateTime, nullable=False)
+
+    def __init__(self, token):
+        self.token = token
+        self.blacklisted_on = datetime.utcnow()
+    
+    def __repr__(self):
+        return '<Token: {} Blacklist_date {}>'.format(self.token, self.blacklisted_on)
+
+    @staticmethod
+    def check_blacklisted(token):
+        # check whether auth token has been blacklisted
+        exists = BlacklistToken.query.filter_by(token=str(token)).first()
+        if exists:
+            return True
+        else:
+            return False
+
