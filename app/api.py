@@ -1,7 +1,7 @@
 """The API routes"""
 import sys
 from datetime import datetime, timedelta
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from flask import jsonify, request, make_response
 from flask_restplus import Resource
 from flask_jwt import jwt, jwt_required
@@ -9,7 +9,7 @@ from flask_jwt import jwt, jwt_required
 from app import APP
 from .restplus import API
 from .models import db, User, BlacklistToken
-from .serializers import add_user, login_user
+from .serializers import add_user, login_user, password_reset
 from .parsers import auth_header
 
 user_ns = API.namespace('users', description="User administration operations.")
@@ -33,7 +33,7 @@ def decode_access_token(access_token):
                 return user.id
         except jwt.ExpiredSignatureError:
             return 'Signature expired. Please log in again.'
-        except jwt.InvalidTokenError:
+        except jwt.InvalidTokenError: 
             return 'Invalid token. Please log in again.'
 
 @user_ns.route('/')
@@ -64,11 +64,13 @@ class SpecificUserHandler(Resource):
         Gets a single user to admin
         """
         user = User.query.filter_by(public_id=public_id).first()
-        print(user, file=sys.stdout)
         if not user:
-            print(user, file=sys.stdout)
-            resp_object = jsonify({"message": "No user found!"})
-            return make_response(resp_object), 204
+            resp_obj = dict(
+                message="No user found!",
+                status="fail"
+            )
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 204)
 
         user_data = {}
         user_data['email'] = user.email
@@ -76,21 +78,7 @@ class SpecificUserHandler(Resource):
         user_data['public_id'] = user.public_id
         user_data['username'] = user.username
         return make_response(jsonify({"user": user_data}), 200)
-    
 
-    def delete(self, public_id):
-        """
-        Removes a user account
-        """
-        user = User.query.filter_by(public_id=public_id).first()
-
-        if not user:
-            return make_response(jsonify({"message": "No user found!"})), 204
-
-        db.session.delete(user)
-        db.session.commit()
-
-        return make_response(jsonify({"message": "User was deleted!"}), 200)
 
 @auth_ns.route('/register')
 class RegisterHandler(Resource):
@@ -186,7 +174,7 @@ class LogoutHandler(Resource):
                     )
                     print(jsonify(response_obj), file=sys.stdout)
                     return make_response(jsonify(response_obj), 200)
-                except Exception as e:
+                except Exception as e: # pragma: no cover
                     resp_obj = {
                         'status': 'fail',
                         'message': e
@@ -205,6 +193,46 @@ class LogoutHandler(Resource):
                 'message': 'Provide a valid auth token.'
             }
             return make_response(jsonify(response_obj), 403)
+
+@auth_ns.route('/reset-password')
+class PasswordResetResource(Resource):
+    """
+    This class handles the user password reset request
+    """
+
+    @API.expect(password_reset)
+    def post(self):
+        """
+        Reset user password
+        """
+        # Request data
+        data = request.get_json()
+        # Get specified user
+        user = User.query.filter_by(public_id=data['public_id']).first()
+
+        if user:
+            
+            if check_password_hash(user.password, data['current_password']):
+                user.password = generate_password_hash(data['new_password'])
+                db.session.commit()
+                resp_obj = dict(
+                    status="Success!",
+                    message="Password reset successfully!"
+                )
+                resp_obj = jsonify(resp_obj)
+                return make_response(resp_obj, 200)
+            resp_obj = dict(
+                status="Fail!",
+                message="Wrong current password. Try again."
+            )
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 401)
+        resp_obj = dict(
+            status="Fail!",
+            message="User doesn't exist, check the Public ID provided!"
+        )
+        resp_obj = jsonify(resp_obj)
+        return make_response(resp_obj, 403)
 
 # ADD the namespaces created to the API
 API.add_namespace(auth_ns)

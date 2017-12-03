@@ -57,14 +57,15 @@ class UserNSTestCase(BaseTestCase):
         This tests whether a single user can be retrieved
         """
         # retrieve an none existed user
-        public_id = str(uuid4())
-        response = self.client.get(
-            '/users/' + public_id,
-            content_type="application/json"
-        )
         with self.client:
-            response_data = json.loads(response.data.decode())
+            public_id = str(uuid4())
+            response = self.client.get(
+                '/users/' + public_id,
+                content_type="application/json"
+            )
+            # assert that unknow user cannot be retrieved
             self.assertTrue(response.status_code, 204)
+            self.assertTrue('No user found!', str(response.data))
             # add test user
             register_user(self, 'isaac@yummy.io', 'isaac', '123pass321')
             user = User.query.filter_by(email='isaac@yummy.io').first()
@@ -265,3 +266,73 @@ class AuthNSTestCase(BaseTestCase):
             self.assertTrue(data['status'] == 'fail')
             self.assertTrue(data['message'] == 'Token blacklisted. Please log in again.')
             self.assertEqual(response.status_code, 401)
+
+    
+    def test_user_password_reset(self):
+        """
+        This test ensures that refistered users can reset their
+        current password
+        """
+        with self.client:
+            # user registration
+            register_user(self, "isaac@yum.my", "isaac", "123456")
+            # login user
+            self.client.post(
+                '/auth/login',
+                data=json.dumps(dict(
+                    email='isaac@yum.my',
+                    password='123456'
+                )),
+                content_type='application/json'
+            )
+            # User public ID
+            user = User.query.filter_by(email="isaac@yum.my").first()
+            public_id = user.public_id
+
+            # ensure that user can reset thier password granted 
+            # they provide the correct public id and current_password
+            response = self.client.post(
+                '/auth/reset-password',
+                data=json.dumps(dict(
+                    public_id=public_id,
+                    current_password='123456',
+                    new_password='12345678',
+                )),
+                content_type='application/json'
+            )
+            self.assert200
+            response_data = json.loads(response.data.decode())
+            self.assertTrue(response_data['status'] == "Success!")
+            self.assertTrue(response_data['message'] == "Password reset successfully!")
+
+            # ensure that user cannot reset thier password if/when 
+            # they provide the incorrect current_password
+            response = self.client.post(
+                '/auth/reset-password',
+                data=json.dumps(dict(
+                    public_id=public_id,
+                    current_password='123456',
+                    new_password='12345678',
+                )),
+                content_type='application/json'
+            )
+            self.assert401
+            response_data = json.loads(response.data.decode())
+            self.assertTrue(response_data['status'] == "Fail!")
+            self.assertTrue(response_data['message'] == "Wrong current password. Try again.")
+
+            # ensure that user cannot reset thier password if/when 
+            # they provide the incorrect public_id
+            response = self.client.post(
+                '/auth/reset-password',
+                data=json.dumps(dict(
+                    public_id="public_id",
+                    current_password='123456',
+                    new_password='12345678',
+                )),
+                content_type='application/json'
+            )
+            self.assert403
+            response_data = json.loads(response.data.decode())
+            self.assertTrue(response_data['status'] == "Fail!")
+            self.assertTrue(response_data['message'] == "User doesn't exist, check the Public ID provided!")
