@@ -1,5 +1,6 @@
 """The API routes"""
 import sys
+from functools import wraps
 from datetime import datetime, timedelta
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask import jsonify, request, make_response
@@ -17,32 +18,67 @@ auth_ns = API.namespace('auth', description="Authentication/Authorization operat
 
 # token decode function:
 def decode_access_token(access_token):
-        """
-        Validates the user access token
-        :param access_token:
-        :return: integer|string
-        """
-        try:
-            payload = jwt.decode(access_token, APP.config.get('SECRET_KEY'))
-            is_blacklisted_token = BlacklistToken.check_blacklisted(access_token)
-            if is_blacklisted_token:
-                return 'Token blacklisted. Please log in again.'
-            else:
-                public_id = payload['sub']
-                user = User.query.filter_by(public_id=public_id).first()
-                return user.id
-        except jwt.ExpiredSignatureError:
-            return 'Signature expired. Please log in again.'
-        except jwt.InvalidTokenError: 
-            return 'Invalid token. Please log in again.'
+    """
+    Validates the user access token
+    :param access_token:
+    :return: integer|string
+    """
+    try:
+        payload = jwt.decode(access_token, APP.config.get('SECRET_KEY'))
+        is_blacklisted_token = BlacklistToken.check_blacklisted(access_token)
+        if is_blacklisted_token:
+            return 'Token blacklisted. Please log in again.'
+        else:
+            public_id = payload['sub']
+            user = User.query.filter_by(public_id=public_id).first()
+            return user.id
+    except jwt.ExpiredSignatureError:
+        return 'Signature expired. Please log in again.'
+    except jwt.InvalidTokenError: 
+        return 'Invalid token. Please log in again.'
+
+# Route security decorator
+def authorization_required(func):
+    """
+    Ensures that only authorized users can access 
+    certain resources
+    """
+
+    @wraps(func)
+    def decorated(*args, **kwargs):
+        
+        token = None
+
+        if 'access_token' in request.headers:
+            token = request.headers['access_token']
+
+        if not token:
+            return make_response(jsonify({"message": "Please provide an access token!"}), 401)
+
+        result = decode_access_token(token)
+
+        if not isinstance(result, str):
+            current_user = User.query.filter_by(id=result).first()
+            return func(current_user, *args, **kwargs)
+        current_user = None
+        return func(current_user, *args, **kwargs)
+    return decorated
 
 @user_ns.route('/')
 class GeneralUserHandler(Resource):
-    def get(self):
+    @API.expect(auth_header, validate=True)
+    @authorization_required
+    def get(current_user, self):
         """
         Returns all the users in the database
         """
 
+        if not current_user:
+            resp_obj = dict(
+                status="fail!",
+                message="You need to be logged in to access/use this resource."
+            )
+            return make_response(jsonify(resp_obj), 401)
         users = User.query.all()
         if users:
             output = []
