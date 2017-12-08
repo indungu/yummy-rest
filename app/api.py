@@ -64,58 +64,6 @@ def authorization_required(func):
         return func(current_user, *args, **kwargs)
     return decorated
 
-@user_ns.route('/')
-class GeneralUserHandler(Resource):
-    @API.expect(auth_header, validate=True)
-    @authorization_required
-    def get(current_user, self):
-        """
-        Returns all the users in the database
-        """
-
-        if not current_user:
-            resp_obj = dict(
-                status="fail!",
-                message="You need to be logged in to access/use this resource."
-            )
-            return make_response(jsonify(resp_obj), 401)
-        users = User.query.all()
-        if users:
-            output = []
-            for user in users:
-                user_data = {}
-                user_data['email'] = user.email
-                user_data['password'] = user.password
-                user_data['public_id'] = user.public_id
-                user_data['username'] = user.username
-                output.append(user_data)
-            return jsonify({"users": output})
-        return jsonify({"message": "No user(s) added!"})
-
-@user_ns.route('/<public_id>')
-class SpecificUserHandler(Resource):
-    
-    def get(self, public_id):
-        """
-        Gets a single user to admin
-        """
-        user = User.query.filter_by(public_id=public_id).first()
-        if not user:
-            resp_obj = dict(
-                message="No user found!",
-                status="fail"
-            )
-            resp_obj = jsonify(resp_obj)
-            return make_response(resp_obj, 204)
-
-        user_data = {}
-        user_data['email'] = user.email
-        user_data['password'] = user.password
-        user_data['public_id'] = user.public_id
-        user_data['username'] = user.username
-        return make_response(jsonify({"user": user_data}), 200)
-
-
 @auth_ns.route('/register')
 class RegisterHandler(Resource):
     """

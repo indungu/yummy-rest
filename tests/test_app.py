@@ -28,54 +28,6 @@ class BaseTestCase(TestCase):
         db.session.remove()
         db.drop_all()
 
-class UserNSTestCase(BaseTestCase):
-    """This test class contains the tests for the API endpoints"""
-
-
-    def test_users_retrieval(self):
-        """
-        This test whether the index route can be reached
-        and the response upon successful reach is a JSON welcome
-        object
-        """
-        # When retieving users from the database 
-        # Ensure that if the database has no users
-        with self.client:
-            response = self.client.get('/users', follow_redirects=True, content_type='application/json')
-            self.assertEqual(response.status_code, 200)
-            self.assertIn(b'No user(s) added!', response.data)
-            # add a test user
-            register_resp = register_user(self, 'isaac@yummy.io', 'isaac', '123pass321')
-            self.assertIn(b'Registered successfully!', register_resp.data)
-            self.assertEqual(register_resp.status_code, 201)
-            # Ensure that added users are added
-            response = self.client.get('/users', follow_redirects=True, content_type='application/json')
-            self.assertIn(b'users', response.data)
-
-    def test_single_user_retrival(self):
-        """
-        This tests whether a single user can be retrieved
-        """
-        # retrieve an none existed user
-        with self.client:
-            public_id = str(uuid4())
-            response = self.client.get(
-                '/users/' + public_id,
-                content_type="application/json"
-            )
-            # assert that unknow user cannot be retrieved
-            self.assertTrue(response.status_code, 204)
-            self.assertTrue('No user found!', str(response.data))
-            # add test user
-            register_user(self, 'isaac@yummy.io', 'isaac', '123pass321')
-            user = User.query.filter_by(email='isaac@yummy.io').first()
-            response = self.client.get(
-                '/users/' + user.public_id,
-                content_type="application/json"
-            )
-            self.assertTrue(response.status_code, 200)
-            self.assertIn(user.public_id, str(response.data))
-
 class AuthNSTestCase(BaseTestCase):
     """
     This class covers the unit tests for the the user
