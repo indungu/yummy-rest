@@ -36,6 +36,11 @@ class Category(db.Model):
     description = db.Column(db.String(40), unique=True, nullable=False)
     recipes = db.relationship('Recipe', backref='category', lazy='dynamic')
 
+    def __init__(self, name, owner, description):
+        self.name = name
+        self.user_id = owner
+        self.description = description
+
 class Recipe(db.Model):
     """Recipes Model"""
 
