@@ -136,3 +136,55 @@ class CategoryTestCase(BaseTestCase):
             self.assert200(response, "Categories not retrieved")
             response_data = json.loads(response.data.decode())
             self.assertTrue(len(response_data['categories']) == 1)
+
+    def test_single_category_retrieval(self):
+        """Ensures that a single category can be retrieved"""
+
+        with self.client as test_client:
+            # Set up
+            register_resp = register_user(self)
+            self.assertEqual(register_resp.status_code, 201)
+            login_resp = login_user(self)
+            self.assert200(login_resp, "User not logged in!")
+            access_token = json.loads(login_resp.data.decode())['access_token']
+            auth_header = dict(
+                Authorization=access_token
+            )
+            # Add test category
+            cat_create_resp = test_client.post(
+                '/category', headers=auth_header, data=test_category,
+                content_type='application/json'
+            )
+            cat_create_resp_data = json.loads(cat_create_resp.data.decode())
+            self.assertEqual(cat_create_resp.status_code, 201)
+            self.assertEqual(cat_create_resp_data['categories'][0]['category_id'], 1)
+
+            # Ensure that the resource is private
+            # Attempt Access with no token
+            response = test_client.get('/category/1', content_type='application/json')
+            self.assertEqual(response.status_code, 401)
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['status'], "Fail!")
+            self.assertEqual(response_data['message'], "Please provide an access token!")
+            
+            # Attempt access with invalid token
+            x_access_token = "5u32905ugnw9e8ut025u2"
+            x_auth_header = dict(Authorization=x_access_token)
+            response = test_client.get(
+                '/category/1', headers=x_auth_header, content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 401)
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['status'], "Fail!")
+            self.assertEqual(response_data['message'], "Invalid token. Login to use this resource!")
+
+            # Ensure single category can be retrieved
+            response = test_client.get(
+                '/category/1', headers=auth_header, content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 200)
+            response_data = json.loads(response.data.decode())
+            print(response_data, file=sys.stdout)
+            self.assertEqual(response_data['status'], "Success!")
+            self.assertTrue(len(response_data['categories']) == 1)
+            self.assertEqual(response_data['categories'][0]['category_name'], "Cookies")

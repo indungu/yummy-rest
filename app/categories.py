@@ -25,7 +25,6 @@ class CategoryHandler(Resource):
 
             # check if category exists
             category = Category.query.filter_by(name=data['category_name']).first()
-            print(category, file=sys.stdout)
             if not category:
                 name = data['category_name']
                 owner = current_user.id
@@ -41,7 +40,9 @@ class CategoryHandler(Resource):
                             category_id=new_category.id,
                             category_name=new_category.name,
                             description=new_category.description,
-                            owner=owner
+                            owner=owner,
+                            date_created=new_category.created_on,
+                            date_updated=new_category.updated_on
                         )],
                         "status": "Success!"
                     }
@@ -78,7 +79,9 @@ class CategoryHandler(Resource):
                 catg = dict(
                     category_id=cat.id,
                     category_name=cat.name,
-                    description=cat.description
+                    description=cat.description,
+                    date_created=cat.created_on,
+                    date_updated=cat.updated_on
                 )
                 categories.append(catg)
             resp_obj = {
@@ -92,3 +95,44 @@ class CategoryHandler(Resource):
         )
         resp_obj = jsonify(resp_obj)
         return make_response(resp_obj, 401)
+
+@categories_ns.route('/<int:id>')
+class SingleCategoryResource(Resource):
+    """
+    This resource handles the Read, Update and Delete functionality
+    on a single Recipe category
+    """
+
+    @authorization_required
+    def get(current_user, self, id):
+        """
+        Returns the specified category
+
+        :param: id (int)
+        """
+        if not current_user:
+            print(current_user, file=sys.stdout)
+            resp_obj = dict(
+                status="Fail!",
+                message='Invalid token. Login to use this resource!'
+            )
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 401)
+        
+        # retrieve specified category
+        category = Category.query.filter_by(id=id).first()
+
+        if category:
+            resp_obj = {
+                "categories": [dict(
+                    category_id=category.id,
+                    category_name=category.name,
+                    category_description=category.description,
+                    date_created=category.created_on,
+                    date_updated=category.updated_on
+                )],
+                "status": "Success!"
+            }
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 200)
+
