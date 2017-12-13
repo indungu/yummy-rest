@@ -1,4 +1,5 @@
 """The categories endpoints"""
+import sys
 from flask import request, jsonify, make_response
 from flask_restplus import Resource
 
@@ -24,7 +25,7 @@ class CategoryHandler(Resource):
 
             # check if category exists
             category = Category.query.filter_by(name=data['category_name']).first()
-                
+            print(category, file=sys.stdout)
             if not category:
                 name = data['category_name']
                 owner = current_user.id
@@ -37,8 +38,9 @@ class CategoryHandler(Resource):
                     db.session.commit()
                     resp_obj = {
                         "categories": [dict(
-                            category_name=name,
-                            description=description,
+                            category_id=new_category.id,
+                            category_name=new_category.name,
+                            description=new_category.description,
                             owner=owner
                         )],
                         "status": "Success!"
@@ -58,6 +60,32 @@ class CategoryHandler(Resource):
             )
             resp_obj = jsonify(resp_obj)
             return make_response(resp_obj, 400)
+        resp_obj = dict(
+            status="Fail!",
+            message='Login to use this resource!'
+        )
+        resp_obj = jsonify(resp_obj)
+        return make_response(resp_obj, 401)
+
+    @authorization_required
+    def get(current_user, self):
+        """Returns a list of user's recipe categories"""
+
+        if current_user:
+            all_categories = Category.query.filter_by(user_id=current_user.id)
+            categories = []
+            for cat in all_categories:
+                catg = dict(
+                    category_id=cat.id,
+                    category_name=cat.name,
+                    description=cat.description
+                )
+                categories.append(catg)
+            resp_obj = {
+                "categories": categories,
+                "message": "Success!"
+            }
+            return make_response(jsonify(resp_obj), 200)
         resp_obj = dict(
             status="Fail!",
             message='Login to use this resource!'
