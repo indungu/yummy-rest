@@ -140,13 +140,13 @@ class SingleCategoryResource(Resource):
             status="Fail!"
         )
         resp_obj = jsonify(resp_obj)
-        return make_response(resp_obj, 400)
+        return make_response(resp_obj, 404)
 
     @authorization_required
     @API.expect(category)
     def put(current_user, self, id):
         """
-        Returns the specified category
+        Updates the specified category
 
         :param: id (int)
         """
@@ -188,5 +188,39 @@ class SingleCategoryResource(Resource):
             status="Fail!"
         )
         resp_obj = jsonify(resp_obj)
-        return make_response(resp_obj, 400)
+        return make_response(resp_obj, 404)
 
+    @authorization_required
+    def delete(current_user, self, id):
+        """
+        Deletes the specified category
+
+        :param: id (int)
+        """
+        if not current_user:
+            print(current_user, file=sys.stdout)
+            resp_obj = dict(
+                status="Fail!",
+                message='Invalid token. Login to use this resource!'
+            )
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 401)
+        
+        # retrieve specified category
+        category = Category.query.filter_by(id=id).first()
+
+        if category:
+            db.session.delete(category)
+            db.session.commit()
+
+            resp_obj = {
+                "status": "Success!"
+            }
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 200)
+        resp_obj = dict(
+            message="Sorry, category does not exist!",
+            status="Fail!"
+        )
+        resp_obj = jsonify(resp_obj)
+        return make_response(resp_obj, 404)
