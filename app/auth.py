@@ -125,7 +125,8 @@ class LoginHandler(Resource):
                     algorithm='HS256'
                 )
                 return jsonify({"message": "Logged in successfully.",
-                                "access_token": token.decode('UTF-8')
+                                "access_token": token.decode('UTF-8'),
+                                "public_id": user.public_id
                                })
             return make_response(jsonify({"message": "Incorrect credentials."}), 401)
         except exec as e: # pragma: no cover
