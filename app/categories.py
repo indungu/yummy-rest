@@ -135,4 +135,58 @@ class SingleCategoryResource(Resource):
             }
             resp_obj = jsonify(resp_obj)
             return make_response(resp_obj, 200)
+        resp_obj = dict(
+            message="Sorry, category does not exist!",
+            status="Fail!"
+        )
+        resp_obj = jsonify(resp_obj)
+        return make_response(resp_obj, 400)
+
+    @authorization_required
+    @API.expect(category)
+    def put(current_user, self, id):
+        """
+        Returns the specified category
+
+        :param: id (int)
+        """
+        if not current_user:
+            print(current_user, file=sys.stdout)
+            resp_obj = dict(
+                status="Fail!",
+                message='Invalid token. Login to use this resource!'
+            )
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 401)
+        
+        # retrieve specified category
+        category = Category.query.filter_by(id=id).first()
+
+        if category:
+            # Get request data
+            data = request.get_json()
+
+            # Update category data
+            category.name = data['category_name']
+            category.description = data['description']
+            db.session.commit()
+
+            resp_obj = {
+                "categories": [dict(
+                    category_id=category.id,
+                    category_name=category.name,
+                    category_description=category.description,
+                    date_created=category.created_on,
+                    date_updated=category.updated_on
+                )],
+                "status": "Success!"
+            }
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 200)
+        resp_obj = dict(
+            message="Sorry, category does not exist!",
+            status="Fail!"
+        )
+        resp_obj = jsonify(resp_obj)
+        return make_response(resp_obj, 400)
 
