@@ -3,7 +3,6 @@ This Test suite houses the category endpoint tests
 """
 import sys
 import json
-# from werkzeug.datastructures import Headers
 from flask_testing import TestCase
 from app import APP
 from app.models import db, Category
@@ -23,8 +22,6 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(register_resp.status_code, 201)
             login_resp = login_user(self)
             self.assertEqual(login_resp.status_code, 200)
-            # h = Headers()
-            # h.add("Authorization", login_resp_data['access_token'] )
             access_token = json.loads(login_resp.data.decode())['access_token']
             response = self.client.post('/category', headers=dict(
                 Authorization=access_token

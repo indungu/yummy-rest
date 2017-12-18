@@ -20,7 +20,8 @@ auth_ns = API.namespace('auth', description="Authentication/Authorization operat
 def decode_access_token(access_token):
     """
     Validates the user access token
-    :param access_token:
+
+    :param str access_token: The access token tp be decoded
     :return: integer|string
     """
     try:
@@ -89,7 +90,7 @@ class RegisterHandler(Resource):
                 db.session.add(new_user)
                 db.session.commit()
                 return make_response(jsonify({'message': 'Registered successfully!'}), 201)
-            except Exception as e: # pragma: no cover
+            except Exception as e: 
                 response = {"message": "Some error occured. Please retry."}
                 return make_response(jsonify(response), 501)
         else:
@@ -107,7 +108,7 @@ class LoginHandler(Resource):
         User Login/SignIn route
         """
         login_info = request.get_json()
-        if not login_info: # pragma: no cover
+        if not login_info: 
             return make_response(jsonify({'message': 'Input payload validation failed'}), 401)
         try:
             user = User.query.filter_by(email=login_info['email']).first()
@@ -129,7 +130,7 @@ class LoginHandler(Resource):
                                 "public_id": user.public_id
                                })
             return make_response(jsonify({"message": "Incorrect credentials."}), 401)
-        except exec as e: # pragma: no cover
+        except exec as e: 
             print(e)
             return make_response(jsonify({"message": "An error occurred. Please try again."}), 501)
 
@@ -162,7 +163,7 @@ class LogoutHandler(Resource):
                     )
                     print(jsonify(response_obj), file=sys.stdout)
                     return make_response(jsonify(response_obj), 200)
-                except Exception as e: # pragma: no cover
+                except Exception as e: 
                     resp_obj = {
                         'status': 'fail',
                         'message': e
