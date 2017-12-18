@@ -25,3 +25,9 @@ category = API.model('Recipe Category', {
     'category_name': fields.String(required=True, description='Name of the recipe category'),
     'description': fields.String(required=True, description='A slight description of the category')
 })
+
+recipe = API.model('Recipe', {
+    'recipe_name': fields.String(required=True, description='Name of the recipe'),
+    'ingredients': fields.String(required=True, description='All the necessary ingredients'),
+    'description': fields.String(required=True, description='The instruction on preparation')
+})

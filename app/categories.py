@@ -4,11 +4,14 @@ from flask import request, jsonify, make_response
 from flask_restplus import Resource
 
 from .auth import authorization_required
-from .models import db, Category, User
+from .models import db, Category
 from .serializers import category
 from .restplus import API
 
-categories_ns = API.namespace('category', description='Contains endpoints for recipe categories.')
+categories_ns = API.namespace(
+    'category', description='Contains endpoints for recipe categories.',
+    path='/category'
+)
 
 @categories_ns.route('')
 class CategoryHandler(Resource):

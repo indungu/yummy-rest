@@ -15,8 +15,8 @@ class User(db.Model):
     email = db.Column(db.String(80), unique=True, nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    categories = db.relationship('Category', backref='user', lazy='dynamic')
-    recipes = db.relationship('Recipe', backref='user', lazy='dynamic')
+    categories = db.relationship('Category', backref='owner', cascade="all, delete-orphan", lazy='dynamic')
+    recipes = db.relationship('Recipe', backref='owner', cascade="all, delete-orphan", lazy='dynamic')
 
     def __init__(self, email, username, password):
         self.public_id = uuid.uuid4()
@@ -38,7 +38,9 @@ class Category(db.Model):
     updated_on = db.Column(
         db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp()
     )
-    recipes = db.relationship('Recipe', backref='category', lazy='dynamic')
+    recipes = db.relationship(
+        'Recipe', backref='category', cascade="all, delete-orphan", lazy='dynamic'
+    )
 
     def __init__(self, name, owner, description):
         self.name = name

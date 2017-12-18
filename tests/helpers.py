@@ -28,6 +28,13 @@ test_category_update = json.dumps(dict(
     description="All my pie recipes."
 ))
 
+# recipe details
+test_recipe = json.dumps(dict(
+    recipe_name='Chocolate chip',
+    ingredients="Some ingredients here\n\rSome others there.",
+    description="Prepare with care and serve with love"
+))
+
 # Register test user
 def register_user(self):
         """Registers a test user"""
