@@ -30,7 +30,7 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assertEqual(category_create_resp.status_code, 201)
 
-    def test_recipe_resource_security(self):
+    def test_recipe_create_resource_security(self):
         """
         Ensures that the resource is protected/private
         """
@@ -40,7 +40,6 @@ class RecipesTestCase(BaseTestCase):
                 '/category/1/recipes', data=test_recipe,
                 content_type='application/json'
             )
-            print(response.data.decode(), file=sys.stdout)
             self.assert401(response, "Wrong reponse code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['status'], 'Fail!')
@@ -115,3 +114,70 @@ class RecipesTestCase(BaseTestCase):
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Recipe already exists!')
+
+    def test_recipes_view_resource_security(self):
+        """
+        Ensures the resource is projected from unauthorized access
+        """
+
+        with self.client as test_client:
+            # Ensure no access without Authorization
+            response = test_client.get(
+                '/category/1/recipes', content_type='application/json'
+            )
+            self.assert401(response, "Invalid status code: " + str(response.status_code))
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['status'], 'Fail!')
+            self.assertEqual(response_data['message'], "Please provide an access token!")
+            # Ensure no access with invalid authorization
+            response = test_client.get(
+                '/category/1/recipes', headers=dict(Authorization="Some98247982hnidutie3rojgnadf"),
+                content_type='application/json'
+            )            
+            self.assert401(response, "Wrong reponse code: " + str(response.status_code))
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['status'], 'Fail!')
+            self.assertEqual(response_data['message'], 'Invalid token. Login to use this resource!')
+
+    def test_recipes_view(self):
+        """
+        Ensures user can view recipes for a particular category
+        """
+
+        self.set_up()
+        with self.client as test_client:
+            # Retrieval from a valid category with no recipes yet
+            response = test_client.get(
+                '/category/1/recipes', headers=self.auth_header,
+                content_type='application/json'
+            )
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['message'], 'No recipes added to this category yet!')
+            self.assertEqual(response_data['status'], 'Success!')
+            # Add test recipe
+            add_recipe_resp = test_client.post(
+                '/category/1/recipes', headers=self.auth_header,
+                data=test_recipe, content_type='application/json'
+            )
+            self.assertEqual(
+                json.loads(add_recipe_resp.data.decode())['status'],
+                'Success!'
+            )
+            # Retrive recipe
+            response = test_client.get(
+                '/category/1/recipes', headers=self.auth_header,
+                content_type='application/json'
+            )
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['status'], 'Success!')
+            self.assertEqual(len(response_data['recipes']), 1)
+
+            # Attempt retrieval from an invalid category
+            response = test_client.get(
+                '/category/2/recipes', headers=self.auth_header,
+                content_type='application/json'
+            )
+            self.assert400(response, "Invalid status code: " + str(response.status_code))
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['status'], 'Fail!')
+            self.assertEqual(response_data['message'], 'Invalid category!')

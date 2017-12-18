@@ -79,3 +79,60 @@ class GeneralRecipesHandler(Resource):
         )
         resp_obj = jsonify(resp_obj)
         return make_response(resp_obj, 400)
+
+    @authorization_required
+    def get(current_user, self, category_id):
+        """
+        Retrives a list of the recipes for the category
+
+        :param int category_id: The id of the category whose recipes to be displayed
+
+        :return str status: The status of the request (Success, Fail)
+
+        :return list recipes: The recipes in the category
+        """
+
+        if not current_user:
+            resp_obj = dict(
+                status='Fail!',
+                message='Invalid token. Login to use this resource!'
+            )
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 401)
+
+        category = current_user.categories.filter_by(id=category_id).first()
+        if category:
+            recipes = category.recipes.all()
+
+            if not recipes:
+                resp_obj = dict(
+                    status='Success!',
+                    message='No recipes added to this category yet!'
+                )
+                resp_obj = jsonify(resp_obj)
+                return make_response(resp_obj, 200)
+
+            user_recipes = []
+            for recipe in recipes:
+                rec = dict(
+                    recipe_name=recipe.name,
+                    recipe_ingredients=recipe.ingredients,
+                    recipe_description=recipe.description,
+                    date_created=recipe.created_on,
+                    date_modified=recipe.updated_on
+                )
+                user_recipes.append(rec)
+
+            resp_obj = {
+                "status": "Success!",
+                "recipes": user_recipes
+            }
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 200)
+        resp_obj = dict(
+            status='Fail!',
+            message='Invalid category!'
+        )
+        resp_obj = jsonify(resp_obj)
+        return make_response(resp_obj, 400)
+
