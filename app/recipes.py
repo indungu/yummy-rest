@@ -6,7 +6,12 @@ from flask_restplus import Resource
 from .auth import authorization_required
 from .models import db, Recipe
 from .serializers import recipe
-from  .restplus import API
+from .restplus import API
+
+# Linting exceptions
+# pylint: disable=C0103
+# pylint: disable=E0213
+# pylint: disable=E1101
 
 recipes_ns = API.namespace(
     'recipes', description='The enpoints for recipe manipulation',
@@ -38,7 +43,7 @@ class GeneralRecipesHandler(Resource):
             resp_obj = jsonify(resp_obj)
             return make_response(resp_obj, 401)
 
-        data = request.get_json()        
+        data = request.get_json()
         category = current_user.categories.filter_by(id=category_id).first()
         if category:
             new_recipe = Recipe(
@@ -48,8 +53,8 @@ class GeneralRecipesHandler(Resource):
                 ingredients=data['ingredients'],
                 description=data['description']
             )
-            recipe = category.recipes.filter_by(name=data['recipe_name']).first()
-            if not recipe:    
+            existing_recipe = category.recipes.filter_by(name=data['recipe_name']).first()
+            if not existing_recipe:
                 db.session.add(new_recipe)
                 db.session.commit()
 
@@ -119,7 +124,7 @@ class GeneralRecipesHandler(Resource):
                     recipe_ingredients=recipe.ingredients,
                     recipe_description=recipe.description,
                     date_created=recipe.created_on,
-                    date_modified=recipe.updated_on
+                    date_modified=recipe.updated_on,
                 )
                 user_recipes.append(rec)
 
@@ -136,3 +141,63 @@ class GeneralRecipesHandler(Resource):
         resp_obj = jsonify(resp_obj)
         return make_response(resp_obj, 400)
 
+@recipes_ns.route('/<int:recipe_id>')
+class SingleRecipeHandler(Resource):
+    """
+    This resource defines the single recipe handler endpoints
+    It contains the READ, UPDATE and DELETE functionality
+    """
+
+    @authorization_required
+    def get(current_user, self, category_id, recipe_id):
+        """
+        This returns a specific recipe from the specified category
+
+        :param int category_id: The integer Id of the category\n
+        :param int recipe_id: The integer Id of the recipe to be retrieved\n
+        :returns json response: An appropriate response depending on the request
+        """
+
+        if not current_user:
+            resp_obj = dict(
+                status='Fail!',
+                message='Invalid token. Login to use this resource!'
+            )
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 401)
+
+        category = current_user.categories.filter_by(id=category_id).first()
+        if category:
+            selected_recipe = category.recipes.filter_by(id=recipe_id).first()
+
+            # When the recipe requested does not exist
+            if not selected_recipe:
+                resp_obj = dict(
+                    status="Fail!",
+                    message="Recipe does not exist!"
+                )
+                resp_obj = jsonify(resp_obj)
+                return make_response(resp_obj, 404)
+
+            # Return the recipe
+            resp_obj = {
+                "status": "Success!",
+                "recipes": [dict(
+                    recipe_name=selected_recipe.name,
+                    recipe_ingredients=selected_recipe.ingredients,
+                    recipe_description=selected_recipe.description,
+                    date_created=selected_recipe.created_on,
+                    date_updated=selected_recipe.updated_on,
+                    category_name=category.name
+                )]
+            }
+            print(resp_obj, file=sys.stdout)
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 200)
+        # When an invalid category id is provided
+        resp_obj = dict(
+            status='Fail!',
+            message='Category does not exist!'
+        )
+        resp_obj = jsonify(resp_obj)
+        return make_response(resp_obj, 404)
