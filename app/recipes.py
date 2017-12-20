@@ -1,4 +1,5 @@
 """The recipes endpoints"""
+import sys
 from flask import request, jsonify, make_response
 from flask_restplus import Resource
 
@@ -210,7 +211,6 @@ class SingleRecipeHandler(Resource):
 
         :param int category_id: The integer Id of the category\n
         :param int recipe_id: The integer Id of the recipe to be retrieved\n
-        :body json: The new recipe details
         :returns json response: An appropriate response depending on the request
         """
 
@@ -245,7 +245,7 @@ class SingleRecipeHandler(Resource):
 
             db.session.commit()
 
-            # Return the recipe
+            # Return the updated recipe
             resp_obj = {
                 "status": "Success!",
                 "recipes": [dict(
@@ -258,6 +258,59 @@ class SingleRecipeHandler(Resource):
                 )]
             }
             resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 200)
+        # When an invalid category id is provided
+        resp_obj = dict(
+            status='Fail!',
+            message='Category does not exist!'
+        )
+        resp_obj = jsonify(resp_obj)
+        return make_response(resp_obj, 404)
+
+    @authorization_required
+    def delete(current_user, self, category_id, recipe_id):
+        """
+        This returns a specific recipe from the specified category
+
+        :param int category_id: The integer Id of the category\n
+        :param int recipe_id: The integer Id of the recipe to be retrieved\n
+        :returns json response: An appropriate response depending on the request
+        """
+
+        if not current_user:
+            resp_obj = dict(
+                status='Fail!',
+                message='Invalid token. Login to use this resource!'
+            )
+            resp_obj = jsonify(resp_obj)
+            return make_response(resp_obj, 401)
+
+        category = current_user.categories.filter_by(id=category_id).first()
+        if category:
+            selected_recipe = category.recipes.filter_by(id=recipe_id).first()
+
+            # When the recipe requested does not exist
+            if not selected_recipe:
+                resp_obj = dict(
+                    status="Fail!",
+                    message="Recipe does not exist!"
+                )
+                resp_obj = jsonify(resp_obj)
+                return make_response(resp_obj, 404)
+
+            name = selected_recipe.name
+
+            # Delete the selected recipe
+            db.session.delete(selected_recipe)
+            db.session.commit()
+
+            # Render response
+            resp_obj = {
+                "status": "Success!",
+                "message": "Recipe " + name + " was deleted successfully!"
+            }
+            resp_obj = jsonify(resp_obj)
+            print(resp_obj.data.decode(), file=sys.stdout)
             return make_response(resp_obj, 200)
         # When an invalid category id is provided
         resp_obj = dict(
