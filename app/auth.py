@@ -1,5 +1,4 @@
 """The API routes"""
-import sys
 from functools import wraps
 from datetime import datetime, timedelta
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -157,14 +156,11 @@ class LogoutHandler(Resource):
         Logout route
         """
         access_token = request.headers.get('Authorization')
-        print(access_token, file=sys.stdout)
         if access_token:
             result = decode_access_token(access_token)
-            print(result, file=sys.stdout)
             if not isinstance(result, str):
                 # mark the token as blacklisted
                 blacklisted_token = BlacklistToken(access_token)
-                print(blacklisted_token, file=sys.stdout)
                 try:
                     # insert the token
                     db.session.add(blacklisted_token)
@@ -173,7 +169,6 @@ class LogoutHandler(Resource):
                         status="success",
                         message="Logged out successfully."
                     )
-                    print(jsonify(response_obj), file=sys.stdout)
                     return make_response(jsonify(response_obj), 200)
                 except Exception as e:
                     resp_obj = {
@@ -186,7 +181,6 @@ class LogoutHandler(Resource):
                     status="fail",
                     message=result
                 )
-                print(jsonify(resp_obj), file=sys.stdout)
                 return make_response(jsonify(resp_obj), 401)
         else:
             response_obj = {

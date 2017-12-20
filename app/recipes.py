@@ -1,5 +1,4 @@
 """The recipes endpoints"""
-import sys
 from flask import request, jsonify, make_response
 from flask_restplus import Resource
 
@@ -310,7 +309,6 @@ class SingleRecipeHandler(Resource):
                 "message": "Recipe " + name + " was deleted successfully!"
             }
             resp_obj = jsonify(resp_obj)
-            print(resp_obj.data.decode(), file=sys.stdout)
             return make_response(resp_obj, 200)
         # When an invalid category id is provided
         resp_obj = dict(
