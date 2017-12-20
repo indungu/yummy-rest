@@ -38,6 +38,13 @@ test_recipe = json.dumps(dict(
     description="Prepare with care and serve with love"
 ))
 
+# update recipe details
+test_recipe_update = json.dumps(dict(
+    recipe_name='Mint Chocolate chip',
+    ingredients="Some ingredients there\n\rSome others here.",
+    description="Prepare with love and serve with care"
+))
+
 # Register test user
 def register_user(self):
     """Registers a test user"""
