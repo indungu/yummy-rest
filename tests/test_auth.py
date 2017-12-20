@@ -1,7 +1,4 @@
 """Unit testing suite for the app module"""
-import time
-
-from uuid import uuid4
 from flask_testing import TestCase
 from flask import json
 from instance.config import app_config
@@ -10,18 +7,21 @@ from app.models import db, User, BlacklistToken
 
 from .helpers import register_user
 
+# pylint: disable=C0103
+# pylint: disable=E1101
+
 class BaseTestCase(TestCase):
     """This class is the base of all test cases"""
     def create_app(self):
         """creates an app for testing"""
         APP.config.from_object(app_config['testing'])
         return APP
-    
+
     def setUp(self):
         """Set up tests"""
         db.create_all()
         db.session.commit()
-        
+
     def tearDown(self):
         """Tear down"""
         # bind the app to the current context
@@ -64,11 +64,11 @@ class AuthNSTestCase(BaseTestCase):
         with self.client:
             response = self.client.post(
                 '/auth/login',
-                data = json.dumps(dict()),
+                data=json.dumps(dict()),
                 content_type="application/json"
             )
             data = json.loads(response.data.decode())
-            self.assert401
+            self.assert400(response, "Invalid response code: " + str(response.status_code))
             self.assertTrue(data['message'] == 'Input payload validation failed')
 
     def test_registered_user_login(self):
@@ -219,7 +219,6 @@ class AuthNSTestCase(BaseTestCase):
             self.assertTrue(data['message'] == 'Token blacklisted. Please log in again.')
             self.assertEqual(response.status_code, 401)
 
-    
     def test_user_password_reset(self):
         """
         This test ensures that refistered users can reset their
@@ -241,7 +240,7 @@ class AuthNSTestCase(BaseTestCase):
             user = User.query.filter_by(email="isaac@yum.my").first()
             public_id = user.public_id
 
-            # ensure that user can reset thier password granted 
+            # ensure that user can reset thier password granted
             # they provide the correct public id and current_password
             response = self.client.post(
                 '/auth/reset-password',
@@ -252,12 +251,12 @@ class AuthNSTestCase(BaseTestCase):
                 )),
                 content_type='application/json'
             )
-            self.assert200
+            self.assert200(response, "Invalid response code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
             self.assertTrue(response_data['status'] == "Success!")
             self.assertTrue(response_data['message'] == "Password reset successfully!")
 
-            # ensure that user cannot reset thier password if/when 
+            # ensure that user cannot reset thier password if/when
             # they provide the incorrect current_password
             response = self.client.post(
                 '/auth/reset-password',
@@ -268,12 +267,12 @@ class AuthNSTestCase(BaseTestCase):
                 )),
                 content_type='application/json'
             )
-            self.assert401
+            self.assert401(response, "Invalid response code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
             self.assertTrue(response_data['status'] == "Fail!")
             self.assertTrue(response_data['message'] == "Wrong current password. Try again.")
 
-            # ensure that user cannot reset thier password if/when 
+            # ensure that user cannot reset thier password if/when
             # they provide the incorrect public_id
             response = self.client.post(
                 '/auth/reset-password',
@@ -284,7 +283,9 @@ class AuthNSTestCase(BaseTestCase):
                 )),
                 content_type='application/json'
             )
-            self.assert403
+            self.assert403(response, "Invalid response code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
             self.assertTrue(response_data['status'] == "Fail!")
-            self.assertTrue(response_data['message'] == "User doesn't exist, check the Public ID provided!")
+            self.assertEqual(
+                response_data['message'], "User doesn't exist, check the Public ID provided!"
+            )

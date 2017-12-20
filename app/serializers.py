@@ -3,6 +3,9 @@
 from flask_restplus import fields
 from .restplus import API
 
+# Linting exception
+# pylint: disable=C0103
+
 # User model serializer
 add_user = API.model('API user', {
     'email': fields.String(required=True, description='User email address'),

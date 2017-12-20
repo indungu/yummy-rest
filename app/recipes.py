@@ -9,9 +9,11 @@ from .serializers import recipe
 from .restplus import API
 
 # Linting exceptions
+
 # pylint: disable=C0103
 # pylint: disable=E0213
 # pylint: disable=E1101
+# pylint: disable=W0613
 
 recipes_ns = API.namespace(
     'recipes', description='The enpoints for recipe manipulation',
@@ -118,13 +120,13 @@ class GeneralRecipesHandler(Resource):
                 return make_response(resp_obj, 200)
 
             user_recipes = []
-            for recipe in recipes:
+            for a_recipe in recipes:
                 rec = dict(
-                    recipe_name=recipe.name,
-                    recipe_ingredients=recipe.ingredients,
-                    recipe_description=recipe.description,
-                    date_created=recipe.created_on,
-                    date_modified=recipe.updated_on,
+                    recipe_name=a_recipe.name,
+                    recipe_ingredients=a_recipe.ingredients,
+                    recipe_description=a_recipe.description,
+                    date_created=a_recipe.created_on,
+                    date_modified=a_recipe.updated_on,
                 )
                 user_recipes.append(rec)
 

@@ -2,8 +2,13 @@
 import uuid
 from datetime import datetime
 from werkzeug.security import generate_password_hash
-from flask_sqlalchemy import SQLAlchemy
 from app import db
+
+# Linting exceptions
+
+# pylint: disable=E1101
+# pylint: disable=C0103
+# pylint: disable=R0903
 
 class User(db.Model):
     """User model"""
@@ -15,8 +20,12 @@ class User(db.Model):
     email = db.Column(db.String(80), unique=True, nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
-    categories = db.relationship('Category', backref='owner', cascade="all, delete-orphan", lazy='dynamic')
-    recipes = db.relationship('Recipe', backref='owner', cascade="all, delete-orphan", lazy='dynamic')
+    categories = db.relationship(
+        'Category', backref='owner', cascade="all, delete-orphan", lazy='dynamic'
+    )
+    recipes = db.relationship(
+        'Recipe', backref='owner', cascade="all, delete-orphan", lazy='dynamic'
+    )
 
     def __init__(self, email, username, password):
         self.public_id = uuid.uuid4()
@@ -77,16 +86,15 @@ class BlacklistToken(db.Model):
     def __init__(self, token):
         self.token = token
         self.blacklisted_on = datetime.utcnow()
-    
+
     def __repr__(self):
         return '<Token: {} Blacklist_date {}>'.format(self.token, self.blacklisted_on)
 
     @staticmethod
     def check_blacklisted(token):
-        # check whether auth token has been blacklisted
-        exists = BlacklistToken.query.filter_by(token=str(token)).first()
-        if exists:
-            return True
-        else:
-            return False
+        """
+        Check whether access token has already been blacklisted
+        """
 
+        exists = BlacklistToken.query.filter_by(token=str(token)).first()
+        return bool(exists)

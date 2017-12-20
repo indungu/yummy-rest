@@ -6,6 +6,7 @@ import json
 from .helpers import register_user, login_user, test_category, test_recipe
 from .test_auth import BaseTestCase
 
+# Linting exceptions
 # pylint: disable=C0103
 # pylint: disable=W0201
 
