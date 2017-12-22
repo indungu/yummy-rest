@@ -20,3 +20,8 @@ password_reset = API.model('Reset password.', {
     'current_password': fields.String(required=True, description='Current password.'),
     'new_password': fields.String(required=True, description='New password.')
 })
+
+category = API.model('Recipe Category', {
+    'category_name': fields.String(required=True, description='Name of the recipe category'),
+    'description': fields.String(required=True, description='A slight description of the category')
+})

@@ -34,7 +34,16 @@ class Category(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     name = db.Column(db.String(40), unique=True, nullable=False)
     description = db.Column(db.String(40), unique=True, nullable=False)
+    created_on = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_on = db.Column(
+        db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp()
+    )
     recipes = db.relationship('Recipe', backref='category', lazy='dynamic')
+
+    def __init__(self, name, owner, description):
+        self.name = name
+        self.user_id = owner
+        self.description = description
 
 class Recipe(db.Model):
     """Recipes Model"""
@@ -49,6 +58,10 @@ class Recipe(db.Model):
     name = db.Column(db.String(40), unique=True, nullable=False)
     ingredients = db.Column(db.String(200), nullable=False)
     description = db.Column(db.String(500), nullable=False)
+    created_on = db.Column(db.DateTime, default=db.func.current_timestamp())
+    updated_on = db.Column(
+        db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp()
+    )
 
 class BlacklistToken(db.Model):
     """Blacklisted tokens Model"""

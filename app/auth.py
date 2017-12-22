@@ -49,11 +49,15 @@ def authorization_required(func):
         
         token = None
 
-        if 'access_token' in request.headers:
-            token = request.headers['access_token']
+        if 'Authorization' in request.headers:
+            token = request.headers['Authorization']
 
         if not token:
-            return make_response(jsonify({"message": "Please provide an access token!"}), 401)
+            response_obj = {
+                "message": "Please provide an access token!",
+                "status": "Fail!"
+            }
+            return make_response(jsonify(response_obj), 401)
 
         result = decode_access_token(token)
 
@@ -89,7 +93,7 @@ class RegisterHandler(Resource):
                 response = {"message": "Some error occured. Please retry."}
                 return make_response(jsonify(response), 501)
         else:
-            return make_response(jsonify({'message': 'User already exists. Please Log in instead.'}), 202)
+            return make_response(jsonify({'message': 'User already exists. Please Log in instead.'}), 400)
 
 @auth_ns.route('/login')
 class LoginHandler(Resource):
@@ -121,7 +125,8 @@ class LoginHandler(Resource):
                     algorithm='HS256'
                 )
                 return jsonify({"message": "Logged in successfully.",
-                                "access_token": token.decode('UTF-8')
+                                "access_token": token.decode('UTF-8'),
+                                "public_id": user.public_id
                                })
             return make_response(jsonify({"message": "Incorrect credentials."}), 401)
         except exec as e: # pragma: no cover
@@ -134,12 +139,11 @@ class LogoutHandler(Resource):
     This class handles user logout
     """
 
-    @API.expect(auth_header, validate=True)
     def post(self):
         """
         Logout route
         """
-        access_token = request.headers.get('access_token')
+        access_token = request.headers.get('Authorization')
         print(access_token, file=sys.stdout)
         if access_token:
             result = decode_access_token(access_token)
@@ -217,8 +221,3 @@ class PasswordResetResource(Resource):
         )
         resp_obj = jsonify(resp_obj)
         return make_response(resp_obj, 403)
-
-# ADD the namespaces created to the API
-API.add_namespace(auth_ns)
-API.add_namespace(user_ns)
-API.init_app(APP)

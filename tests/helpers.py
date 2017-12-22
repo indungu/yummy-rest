@@ -3,14 +3,41 @@ This are helper methods/functions shared across test cases
 """
 from flask import json
 
-# Register user helper
+# Registration details
+user_details = dict(
+    email="isaac@yum.my",
+    username="isaac",
+    password="123456"
+)
 
-def register_user(self, email, username, password):
+# Login details
+login_details = dict(
+    email=user_details['email'],
+    password=user_details['password']
+)
+
+# Test Category details
+test_category = json.dumps(dict(
+    category_name="Cookies",
+    description="All my cookies recipes."
+))
+
+# Test Category update details
+test_category_update = json.dumps(dict(
+    category_name="Pies",
+    description="All my pie recipes."
+))
+
+# Register test user
+def register_user(self):
         """Registers a test user"""
         return self.client.post('/auth/register',
-                                  data=json.dumps(dict(
-                                      email=email,
-                                      username=username,
-                                      password=password
-                                  )), content_type="application/json"
-                                 )
+                                  data=json.dumps(user_details), content_type='application/json'
+                                )
+
+# Login test user
+def login_user(self):
+    """Logs a user in"""
+    return self.client.post('/auth/login',
+                              data=json.dumps(login_details), content_type='application/json'
+                            )

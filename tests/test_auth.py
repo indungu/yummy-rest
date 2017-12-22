@@ -36,7 +36,7 @@ class AuthNSTestCase(BaseTestCase):
     def test_registration(self):
         """ Test for user registration """
         with self.client:
-            response = register_user(self, "isaac@yum.my", "isaac", "123456")
+            response = register_user(self)
             data = json.loads(response.data.decode())
             self.assertTrue(data['message'] == 'Registered successfully!')
             self.assertTrue(response.content_type == 'application/json')
@@ -52,12 +52,12 @@ class AuthNSTestCase(BaseTestCase):
         db.session.add(user)
         db.session.commit()
         with self.client:
-            response = register_user(self, "isaac@yum.my", "Isaac" ,"123456")
+            response = register_user(self)
             data = json.loads(response.data.decode())
             self.assertTrue(
                 data['message'] == 'User already exists. Please Log in instead.')
             self.assertTrue(response.content_type == 'application/json')
-            self.assertEqual(response.status_code, 202)
+            self.assertEqual(response.status_code, 400)
 
     def test_login_without_credentials(self):
         """Test login resource without any credentials supplied"""
@@ -75,7 +75,7 @@ class AuthNSTestCase(BaseTestCase):
         """ Test for login of registered-user login """
         with self.client:
             # user registration
-            register_resp = register_user(self, "isaac@yum.my", "isaac", "123456")
+            register_resp = register_user(self)
             data_register = json.loads(register_resp.data.decode())
             self.assertTrue(
                 data_register['message'] == 'Registered successfully!'
@@ -117,7 +117,7 @@ class AuthNSTestCase(BaseTestCase):
         """ Test for login of registered-user login """
         with self.client:
             # user registration
-            register_resp = register_user(self, "isaac@yum.my", "isaac", "123456")
+            register_resp = register_user(self)
             data_register = json.loads(register_resp.data.decode())
             self.assertTrue(
                 data_register['message'] == 'Registered successfully!'
@@ -142,7 +142,7 @@ class AuthNSTestCase(BaseTestCase):
         """ Test for logout before token expires """
         with self.client:
             # user registration
-            register_resp = register_user(self, "isaac@yum.my", "isaac", "123456")
+            register_resp = register_user(self)
             data_register = json.loads(register_resp.data.decode())
             self.assertTrue(
                 data_register['message'] == 'Registered successfully!')
@@ -166,7 +166,7 @@ class AuthNSTestCase(BaseTestCase):
             response = self.client.post(
                 '/auth/logout',
                 headers=dict(
-                    access_token=json.loads(
+                    Authorization=json.loads(
                         login_resp.data.decode()
                     )['access_token']
                 )
@@ -180,7 +180,7 @@ class AuthNSTestCase(BaseTestCase):
         """ Test for logout after a valid token gets blacklisted """
         with self.client:
             # user registration
-            register_resp = register_user(self, "isaac@yum.my", "isaac", "123456")
+            register_resp = register_user(self)
             data_register = json.loads(register_resp.data.decode())
             self.assertTrue(
                 data_register['message'] == 'Registered successfully!')
@@ -209,7 +209,7 @@ class AuthNSTestCase(BaseTestCase):
             response = self.client.post(
                 '/auth/logout',
                 headers=dict(
-                    access_token=json.loads(
+                    Authorization=json.loads(
                         login_resp.data.decode()
                     )['access_token']
                 )
@@ -227,7 +227,7 @@ class AuthNSTestCase(BaseTestCase):
         """
         with self.client:
             # user registration
-            register_user(self, "isaac@yum.my", "isaac", "123456")
+            register_user(self)
             # login user
             self.client.post(
                 '/auth/login',
