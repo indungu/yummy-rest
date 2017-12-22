@@ -1,10 +1,16 @@
 """Main APP module"""
-
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+# local import
+from instance.config import app_config
+from app.restplus import API
+
+# initialize sql-alchemy
+db = SQLAlchemy()
 
 APP = Flask(__name__, instance_relative_config=True)
+APP.config.from_object(app_config['development'])
+db.init_app(APP)
 
-from app import views
-
-APP.config['SQLALCHEMY_DATABASE_URI'] = 'postgres://postgres:password@localhost:5432/yummy_rest_db'
-APP.config.from_pyfile('config.py')
+from app.api import API
