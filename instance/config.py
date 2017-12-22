@@ -1,10 +1,17 @@
 """App intance configs"""
 
 import os
+# Linting exceptions
+
+# pylint: disable=C0103
+# pylint: disable=W0702
+# pylint: disable=W0703
+# pylint: disable=R0903
+# pylint: disable=E1101
+
 basedir = os.path.abspath(os.path.dirname(__file__))
 postgres_local_base = 'postgresql://localhost/'
 database_name = 'yummy_rest'
-
 
 class BaseConfig:
     """Base configuration."""

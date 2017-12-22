@@ -3,6 +3,9 @@ This are helper methods/functions shared across test cases
 """
 from flask import json
 
+# linting exception
+# pylint: disable=C0103
+
 # Registration details
 user_details = dict(
     email="isaac@yum.my",
@@ -28,16 +31,30 @@ test_category_update = json.dumps(dict(
     description="All my pie recipes."
 ))
 
+# recipe details
+test_recipe = json.dumps(dict(
+    recipe_name='Chocolate chip',
+    ingredients="Some ingredients here\n\rSome others there.",
+    description="Prepare with care and serve with love"
+))
+
+# update recipe details
+test_recipe_update = json.dumps(dict(
+    recipe_name='Mint Chocolate chip',
+    ingredients="Some ingredients there\n\rSome others here.",
+    description="Prepare with love and serve with care"
+))
+
 # Register test user
 def register_user(self):
-        """Registers a test user"""
-        return self.client.post('/auth/register',
-                                  data=json.dumps(user_details), content_type='application/json'
-                                )
+    """Registers a test user"""
+    return self.client.post('/auth/register',
+                            data=json.dumps(user_details), content_type='application/json'
+                           )
 
 # Login test user
 def login_user(self):
     """Logs a user in"""
     return self.client.post('/auth/login',
-                              data=json.dumps(login_details), content_type='application/json'
-                            )
+                            data=json.dumps(login_details), content_type='application/json'
+                           )

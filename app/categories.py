@@ -4,11 +4,25 @@ from flask import request, jsonify, make_response
 from flask_restplus import Resource
 
 from .auth import authorization_required
-from .models import db, Category, User
+from .models import db, Category
 from .serializers import category
 from .restplus import API
 
-categories_ns = API.namespace('category', description='Contains endpoints for recipe categories.')
+# Linting exceptions
+
+# pylint: disable=C0103
+# pylint: disable=W0702
+# pylint: disable=W0703
+# pylint: disable=W0613
+# pylint: disable=W0622
+# pylint: disable=E1101
+# pylint: disable=E0213
+# pylint: disable=R0201
+
+categories_ns = API.namespace(
+    'category', description='Contains endpoints for recipe categories.',
+    path='/category'
+)
 
 @categories_ns.route('')
 class CategoryHandler(Resource):
@@ -24,8 +38,10 @@ class CategoryHandler(Resource):
             data = request.get_json()
 
             # check if category exists
-            category = Category.query.filter_by(name=data['category_name']).first()
-            if not category:
+            existing_category = current_user.categories.filter_by(
+                name=data['category_name']
+            ).first()
+            if not existing_category:
                 name = data['category_name']
                 owner = current_user.id
                 description = data['description']
@@ -118,18 +134,18 @@ class SingleCategoryResource(Resource):
             )
             resp_obj = jsonify(resp_obj)
             return make_response(resp_obj, 401)
-        
-        # retrieve specified category
-        category = Category.query.filter_by(id=id).first()
 
-        if category:
+        # retrieve specified category
+        specified_category = Category.query.filter_by(id=id).first()
+
+        if specified_category:
             resp_obj = {
                 "categories": [dict(
-                    category_id=category.id,
-                    category_name=category.name,
-                    category_description=category.description,
-                    date_created=category.created_on,
-                    date_updated=category.updated_on
+                    category_id=specified_category.id,
+                    category_name=specified_category.name,
+                    category_description=specified_category.description,
+                    date_created=specified_category.created_on,
+                    date_updated=specified_category.updated_on
                 )],
                 "status": "Success!"
             }
@@ -158,26 +174,26 @@ class SingleCategoryResource(Resource):
             )
             resp_obj = jsonify(resp_obj)
             return make_response(resp_obj, 401)
-        
-        # retrieve specified category
-        category = Category.query.filter_by(id=id).first()
 
-        if category:
+        # retrieve specified category
+        specified_category = current_user.categories.filter_by(id=id).first()
+
+        if specified_category:
             # Get request data
             data = request.get_json()
 
             # Update category data
-            category.name = data['category_name']
-            category.description = data['description']
+            specified_category.name = data['category_name']
+            specified_category.description = data['description']
             db.session.commit()
 
             resp_obj = {
                 "categories": [dict(
-                    category_id=category.id,
-                    category_name=category.name,
-                    category_description=category.description,
-                    date_created=category.created_on,
-                    date_updated=category.updated_on
+                    category_id=specified_category.id,
+                    category_name=specified_category.name,
+                    category_description=specified_category.description,
+                    date_created=specified_category.created_on,
+                    date_updated=specified_category.updated_on
                 )],
                 "status": "Success!"
             }
@@ -205,12 +221,12 @@ class SingleCategoryResource(Resource):
             )
             resp_obj = jsonify(resp_obj)
             return make_response(resp_obj, 401)
-        
-        # retrieve specified category
-        category = Category.query.filter_by(id=id).first()
 
-        if category:
-            db.session.delete(category)
+        # retrieve specified category
+        specified_category = current_user.categories.filter_by(id=id).first()
+
+        if specified_category:
+            db.session.delete(specified_category)
             db.session.commit()
 
             resp_obj = {

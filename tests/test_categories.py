@@ -1,13 +1,12 @@
 """
 This Test suite houses the category endpoint tests
 """
-import sys
 import json
-# from werkzeug.datastructures import Headers
-from flask_testing import TestCase
-from app import APP
-from app.models import db, Category
 from .test_auth import BaseTestCase
+
+# Linting exceptions
+# pylint: disable=C0103
+# pylint: disable=W0201
 
 # Test Helpers
 from .helpers import register_user, login_user, test_category, test_category_update
@@ -23,8 +22,6 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(register_resp.status_code, 201)
             login_resp = login_user(self)
             self.assertEqual(login_resp.status_code, 200)
-            # h = Headers()
-            # h.add("Authorization", login_resp_data['access_token'] )
             access_token = json.loads(login_resp.data.decode())['access_token']
             response = self.client.post('/category', headers=dict(
                 Authorization=access_token
@@ -65,7 +62,9 @@ class CategoryTestCase(BaseTestCase):
 
         with self.client:
             # Ensure that resource can not be accessed without an access token
-            response = self.client.post('/category', data=test_category, content_type='application/json')
+            response = self.client.post(
+                '/category', data=test_category, content_type='application/json'
+            )
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 401)
             self.assertEqual(response_data['status'], "Fail!")
@@ -118,7 +117,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
-            print(response_data, file=sys.stdout)
             self.assertTrue(response_data['message'] == "Success!")
             self.assertTrue(len(response_data['categories']) == 0)
             # Create a test category
@@ -166,7 +164,7 @@ class CategoryTestCase(BaseTestCase):
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Please provide an access token!")
-            
+
             # Attempt access with invalid token
             x_access_token = "5u32905ugnw9e8ut025u2"
             x_auth_header = dict(Authorization=x_access_token)
@@ -184,7 +182,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
-            print(response_data, file=sys.stdout)
             self.assertEqual(response_data['status'], "Success!")
             self.assertTrue(len(response_data['categories']) == 1)
             self.assertEqual(response_data['categories'][0]['category_name'], "Cookies")
@@ -195,7 +192,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 404)
             response_data = json.loads(response.data.decode())
-            print(response_data, file=sys.stdout)
             self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Sorry, category does not exist!")
 
@@ -231,7 +227,7 @@ class CategoryTestCase(BaseTestCase):
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Please provide an access token!")
-            
+
             # Attempt access with invalid token
             x_access_token = "5u32905ugnw9e8ut025u2"
             x_auth_header = dict(Authorization=x_access_token)
@@ -251,7 +247,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
-            print(response_data, file=sys.stdout)
             self.assertEqual(response_data['status'], "Success!")
             self.assertTrue(len(response_data['categories']) == 1)
             self.assertEqual(response_data['categories'][0]['category_name'], "Pies")
@@ -263,7 +258,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 404)
             response_data = json.loads(response.data.decode())
-            print(response_data, file=sys.stdout)
             self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Sorry, category does not exist!")
 
@@ -298,7 +292,7 @@ class CategoryTestCase(BaseTestCase):
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Please provide an access token!")
-            
+
             # Attempt access with invalid token
             x_access_token = "5u32905ugnw9e8ut025u2"
             x_auth_header = dict(Authorization=x_access_token)
@@ -316,7 +310,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
-            print(response_data, file=sys.stdout)
             self.assertEqual(response_data['status'], "Success!")
 
             # Attempt delete of non-existent category
@@ -325,6 +318,5 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 404)
             response_data = json.loads(response.data.decode())
-            print(response_data, file=sys.stdout)
             self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Sorry, category does not exist!")

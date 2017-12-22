@@ -3,6 +3,9 @@
 from flask_restplus import fields
 from .restplus import API
 
+# Linting exception
+# pylint: disable=C0103
+
 # User model serializer
 add_user = API.model('API user', {
     'email': fields.String(required=True, description='User email address'),
@@ -24,4 +27,10 @@ password_reset = API.model('Reset password.', {
 category = API.model('Recipe Category', {
     'category_name': fields.String(required=True, description='Name of the recipe category'),
     'description': fields.String(required=True, description='A slight description of the category')
+})
+
+recipe = API.model('Recipe', {
+    'recipe_name': fields.String(required=True, description='Name of the recipe'),
+    'ingredients': fields.String(required=True, description='All the necessary ingredients'),
+    'description': fields.String(required=True, description='The instruction on preparation')
 })
