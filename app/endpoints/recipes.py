@@ -2,10 +2,10 @@
 from flask import request, jsonify, make_response
 from flask_restplus import Resource
 
+from app.models import db, Recipe
+from app.serializers import recipe
+from app.restplus import API
 from .auth import authorization_required
-from .models import db, Recipe
-from .serializers import recipe
-from .restplus import API
 
 # Linting exceptions
 

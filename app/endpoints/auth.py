@@ -7,9 +7,9 @@ from flask_restplus import Resource
 from flask_jwt import jwt
 
 from app import APP
-from .restplus import API
-from .models import db, User, BlacklistToken
-from .serializers import add_user, login_user, password_reset
+from app.restplus import API
+from app.models import db, User, BlacklistToken
+from app.serializers import add_user, login_user, password_reset
 
 # Linting exceptions
 

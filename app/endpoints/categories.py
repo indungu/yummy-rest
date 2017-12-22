@@ -3,10 +3,10 @@ import sys
 from flask import request, jsonify, make_response
 from flask_restplus import Resource
 
+from app.models import db, Category
+from app.serializers import category
+from app.restplus import API
 from .auth import authorization_required
-from .models import db, Category
-from .serializers import category
-from .restplus import API
 
 # Linting exceptions
 
