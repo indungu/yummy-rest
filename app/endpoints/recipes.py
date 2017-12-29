@@ -5,7 +5,7 @@ from flask_restplus import Resource
 from app.models import db, Recipe
 from app.serializers import recipe
 from app.restplus import API
-from .auth import authorization_required
+from app.helpers import authorization_required
 
 # Linting exceptions
 
