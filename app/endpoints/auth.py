@@ -7,6 +7,7 @@ from flask_jwt import jwt
 
 from app import APP
 from app.helpers import decode_access_token
+from app.helpers.validators import UserSchema
 from app.restplus import API
 from app.models import db, User, BlacklistToken
 from app.serializers import add_user, login_user, password_reset
@@ -19,7 +20,6 @@ from app.serializers import add_user, login_user, password_reset
 # pylint: disable=E1101
 # pylint: disable=R0201
 
-user_ns = API.namespace('users', description="User administration operations.")
 auth_ns = API.namespace('auth', description="Authentication/Authorization operations.")
 
 @auth_ns.route('/register')
@@ -34,6 +34,17 @@ class RegisterHandler(Resource):
         Registers a new user account.
         """
         data = request.get_json()
+
+        # Instanciate user schema
+        user_schema = UserSchema()
+        data, errors = user_schema.load(data)
+
+        if errors:
+            response_obj = dict(
+                errors=errors,
+                message='You provided some invalid details.'
+            )
+            return make_response(jsonify(response_obj), 422)
 
         # Check if user exists
         user = User.query.filter_by(email=data['email']).first()

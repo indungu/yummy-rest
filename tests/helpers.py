@@ -10,7 +10,28 @@ from flask import json
 user_details = dict(
     email="isaac@yum.my",
     username="isaac",
-    password="123456"
+    password="1234509876"
+)
+
+# Registration details with invalid email
+user_details_inv_email = dict(
+    email="isaac@yummy",
+    username="isaac",
+    password="1234509876"
+)
+
+# Registration details with invalid username
+# with special characters
+user_details_inv_username = dict(
+    email="isaac@yummy",
+    username="is@@c",
+    password="1234509876"
+)
+# invalid length
+user_details_inv_username_2 = dict(
+    email="isaac@yummy",
+    username="@c",
+    password="1234509876"
 )
 
 # Login details
@@ -46,10 +67,10 @@ test_recipe_update = json.dumps(dict(
 ))
 
 # Register test user
-def register_user(self):
+def register_user(self, user_data=user_details):
     """Registers a test user"""
     return self.client.post('/auth/register',
-                            data=json.dumps(user_details), content_type='application/json'
+                            data=json.dumps(user_data), content_type='application/json'
                            )
 
 # Login test user
