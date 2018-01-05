@@ -109,6 +109,48 @@ class AuthNSTestCase(BaseTestCase):
             self.assertTrue(response.content_type == 'application/json')
             self.assertEqual(response.status_code, 422)
 
+    def test_registration_with_invalid_passowrd(self):
+        """ Test for user registration with an invalid password """
+        with self.client:
+            # Ensure user can't register with a password that is less than
+            # 8 characters long
+            user_details = dict(
+                email="some@person.com",
+                username="some_user",
+                password="pass"
+            )
+            response = register_user(self, user_data=user_details)
+            data = json.loads(response.data.decode())
+            self.assertTrue(
+                data['message'] == 'You provided some invalid details.'
+            )
+            errors = data['errors']
+            self.assertTrue(
+                'password' in errors
+            )
+            self.assertEqual(
+                errors['password'][0], 'Password should be 8 characters or longer.'
+            )
+            self.assertTrue(response.content_type == 'application/json')
+            self.assertEqual(response.status_code, 422)
+
+            # When the password has space character
+            user_details['password'] = "   some_pass"
+            response = register_user(self, user_data=user_details)
+            data = json.loads(response.data.decode())
+            self.assertTrue(
+                data['message'] == 'You provided some invalid details.'
+            )
+            errors = data['errors']
+            self.assertTrue(
+                'password' in errors
+            )
+            self.assertEqual(
+                errors['password'][0], 'Password should not have spaces.'
+            )
+            self.assertTrue(response.content_type == 'application/json')
+            self.assertEqual(response.status_code, 422)
+
     def test_login_without_credentials(self):
         """Test login resource without any credentials supplied"""
         with self.client:

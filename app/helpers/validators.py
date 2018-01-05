@@ -30,7 +30,7 @@ def validate_username(data):
     # minimum length
     if len(data) >= 3:
         # set the regex to validate against
-        username_re = re.compile(r"(^[a-zA-Z0-9]+$)")
+        username_re = re.compile(r"(^\w+$)")
 
         # check email passed and raise error if invalid
         result = re.fullmatch(username_re, data)
@@ -52,7 +52,14 @@ def validate_password(data):
 
     # minimum length
     if not len(data) >= 8:
-        raise ValidationError('Password should be 8 characters or longer')
+        raise ValidationError('Password should be 8 characters or longer.')
+    else:
+        password_re = re.compile(r"^\S+$")
+        valid = re.fullmatch(password_re, data)
+        if not valid:
+            raise ValidationError(
+                'Password should not have spaces.'
+            )
 
 # User schema
 class UserSchema(Schema):
