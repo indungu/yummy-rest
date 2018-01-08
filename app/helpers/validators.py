@@ -64,11 +64,54 @@ def validate_password(data):
 # User schema
 class UserSchema(Schema):
     """
-    This schema leverages the validation functions of the
-    marshmallow library to validate user input and generate
+    This schema leverages the validation error reporting capabilities
+    of themarshmallow library to validate user input and generate
     error messages on the fly
     """
 
     email = fields.Email(required=True, validate=validate_email)
     username = fields.Str(required=True, validate=validate_username)
     password = fields.Str(required=True, validate=validate_password)
+
+def validate_name(name):
+    """
+    This validates that the name provided meets the set criteria for validity.
+    """
+
+    if len(name) < 3:
+        raise ValidationError(
+            "Name too short. Should be 3 or more characters."
+        )
+    else:
+        name_re = re.compile(r"^[a-zA-Z_.]+$")
+        valid = re.fullmatch(name_re, name)
+        if not valid:
+            raise ValidationError(
+                "Name should only contain letters, an underscore and/or a period."
+            )
+
+def validate_description(data):
+    """
+    This validates that the name provided meets the set criteria for validity.
+    """
+
+    if len(data) > 50:
+        raise ValidationError(
+            "Description should not be more than 50 characters long."
+        )
+    else:
+        input_re = re.compile(r"\s")
+        valid = re.sub(input_re, '', data)
+        if not valid:
+            raise ValidationError(
+                "You need to provide a valid description."
+            )
+
+# Categories Schema
+class CategorySchema(Schema):
+    """
+    This schema validates user input when creating a new category
+    """
+
+    category_name = fields.Str(required=True, validate=validate_name)
+    description = fields.Str(required=True, validate=validate_description)

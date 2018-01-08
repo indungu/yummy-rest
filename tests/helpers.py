@@ -46,6 +46,18 @@ test_category = json.dumps(dict(
     description="All my cookies recipes."
 ))
 
+# Invalid Test Category details
+invalid_category = json.dumps(dict(
+    category_name="Co",
+    description="All my cookies recipes. All my cookies recipes. All my cookies recipes."
+))
+
+# Invalid Test Category details
+invalid_category_2 = json.dumps(dict(
+    category_name="C00kies",
+    description="     "
+))
+
 # Test Category update details
 test_category_update = json.dumps(dict(
     category_name="Pies",

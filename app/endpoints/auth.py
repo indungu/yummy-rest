@@ -47,7 +47,8 @@ class RegisterHandler(Resource):
             return make_response(jsonify(response_obj), 422)
 
         # Check if user exists
-        user = User.query.filter_by(email=data['email']).first()
+        email = data['email'].lower()
+        user = User.query.filter_by(email=email).first()
         if not user:
             try:
                 new_user = User(
