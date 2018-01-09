@@ -64,6 +64,20 @@ test_category_update = json.dumps(dict(
     description="All my pie recipes."
 ))
 
+# invalid recipe details
+invalid_recipe = json.dumps(dict(
+    recipe_name='Ch',
+    ingredients="      ",
+    description="Prepare with care and serve with love"
+))
+
+# invalid recipe details
+invalid_recipe_2 = json.dumps(dict(
+    recipe_name='Ch0c0late',
+    ingredients="Some ingredients here\n\rSome others there.",
+    description="    "
+))
+
 # recipe details
 test_recipe = json.dumps(dict(
     recipe_name='Chocolate chip',

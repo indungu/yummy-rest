@@ -5,7 +5,8 @@ from flask_restplus import Resource
 from app.models import db, Recipe
 from app.serializers import recipe
 from app.restplus import API
-from app.helpers import authorization_required
+from app.helpers import authorization_required, _clean_name
+from app.helpers.validators import RecipeSchema
 
 # Linting exceptions
 
@@ -45,6 +46,25 @@ class GeneralRecipesHandler(Resource):
             return make_response(resp_obj, 401)
 
         data = request.get_json()
+        print(data)
+        data['recipe_name'] = _clean_name(data['recipe_name'])
+        print(data)
+
+        # initialize schema object for input validation
+        recipe_schema = RecipeSchema()
+
+        # Validate input
+        data, errors = recipe_schema.load(data)
+        print(data, errors)
+
+        # Raise input error notification
+        if errors:
+            response_obj = dict(
+                message="You provided some invalid details.",
+                errors=errors
+            )
+            return make_response(jsonify(response_obj), 422)
+
         category = current_user.categories.filter_by(id=category_id).first()
         if category:
             new_recipe = Recipe(

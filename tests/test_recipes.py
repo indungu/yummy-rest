@@ -3,8 +3,9 @@ This is the unit test suite for the recipes endpoint
 """
 import json
 
-from .helpers import register_user, login_user, test_category, test_recipe, test_recipe_update
 from .test_auth import BaseTestCase
+from .helpers import register_user, login_user, test_category, test_recipe, test_recipe_update,\
+                     invalid_recipe, invalid_recipe_2
 
 # Linting exceptions
 # pylint: disable=C0103
@@ -92,6 +93,49 @@ class RecipesTestCase(BaseTestCase):
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['status'], 'Success!')
             self.assertEqual(len(response_data['recipes']), 1)
+
+    def test_recipe_creation_valid_category_invalid_name(self):
+        """
+        Ensures a user cannot create a recipe in a specified category
+        with invalid recipe details
+        """
+
+        self.set_up()
+        with self.client as test_client:
+
+            # When the recipe name is
+            # of invalid length
+            response = test_client.post(
+                '/category/1/recipes', headers=self.auth_header,
+                data=invalid_recipe, content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 422)
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['message'], 'You provided some invalid details.')
+            errors = response_data['errors']
+            self.assertTrue(
+                'recipe_name' in errors
+            )
+            self.assertEqual(
+                errors['recipe_name'][0], "Name too short. Should be 3 or more characters."
+            )
+            # When the recipe name is
+            # of invalid format
+            response = test_client.post(
+                '/category/1/recipes', headers=self.auth_header,
+                data=invalid_recipe_2, content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 422)
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['message'], 'You provided some invalid details.')
+            errors = response_data['errors']
+            self.assertTrue(
+                'recipe_name' in errors
+            )
+            self.assertEqual(
+                errors['recipe_name'][0],
+                "Name should only contain letters, an underscore and/or a period."
+            )
 
     def test_recipe_duplication(self):
         """
@@ -200,8 +244,7 @@ class RecipesTestCase(BaseTestCase):
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Please provide an access token!')
-        # Attempt access with invalid authorization
-        with self.client as test_client:
+            # Attempt access with invalid authorization
             response = test_client.get(
                 '/category/1/recipes/1', headers=dict(Authorization="gih248h9ehg2iu028"),
                 content_type='application/json'
@@ -356,7 +399,7 @@ class RecipesTestCase(BaseTestCase):
             self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Please provide an access token!')
             # Attempt access with invalid authorization
-            response = test_client.get(
+            response = test_client.delete(
                 '/category/1/recipes/1', headers=dict(Authorization="gih248h9ehg2iu028"),
                 content_type='application/json'
             )
@@ -405,7 +448,7 @@ class RecipesTestCase(BaseTestCase):
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['status'], "Success!")
             self.assertEqual(
-                response_data['message'], 'Recipe Chocolate chip was deleted successfully!'
+                response_data['message'], 'Recipe chocolate_chip was deleted successfully!'
             )
 
             # Delete recipe from a valid category with an

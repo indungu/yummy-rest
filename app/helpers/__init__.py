@@ -1,7 +1,7 @@
 """
 This package contains the helper functions
 """
-
+import re
 from functools import wraps
 from flask import jsonify, request, make_response
 from flask_jwt import jwt
@@ -63,3 +63,12 @@ def authorization_required(func):
         current_user = None
         return func(current_user, *args, **kwargs)
     return decorated
+
+def _clean_name(name):
+    """
+    This function sets the name of a recipe to the standard naming
+    convention specified
+    """
+
+    name = re.sub(r'\s', "_", name)
+    return name.lower()
