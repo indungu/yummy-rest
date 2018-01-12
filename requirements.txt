@@ -42,5 +42,6 @@ requests==2.18.4
 six==1.11.0
 SQLAlchemy==1.1.15
 urllib3==1.22
+webargs==1.8.1
 Werkzeug==0.12.2
 wrapt==1.10.11
