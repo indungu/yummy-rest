@@ -19,9 +19,9 @@ db.init_app(APP)
 
 # Import and add namespaces for the endpoints
 from app.restplus import API
-from app.auth import auth_ns
-from app.categories import categories_ns
-from app.recipes import recipes_ns
+from app.endpoints.auth import auth_ns
+from app.endpoints.categories import categories_ns
+from app.endpoints.recipes import recipes_ns
 
 API.add_namespace(auth_ns)
 API.add_namespace(categories_ns)

@@ -9,7 +9,8 @@ from .test_auth import BaseTestCase
 # pylint: disable=W0201
 
 # Test Helpers
-from .helpers import register_user, login_user, test_category, test_category_update
+from .helpers import register_user, login_user, test_category, test_category_update, \
+                     invalid_category, invalid_category_2
 
 class CategoryTestCase(BaseTestCase):
     """This class contains the tests for the categories namespace"""
@@ -30,8 +31,86 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(response.status_code, 201)
             self.assertEqual(response_data['status'], "Success!")
 
+    def test_category_creation_invalid_name(self):
+        """Ensures category cannot be created with an invalid name"""
+
+        with self.client:
+            register_resp = register_user(self)
+            self.assertEqual(register_resp.status_code, 201)
+            login_resp = login_user(self)
+            self.assertEqual(login_resp.status_code, 200)
+            access_token = json.loads(login_resp.data.decode())['access_token']
+            # Ensure that category name is of a valid length
+            response = self.client.post('/category', headers=dict(
+                Authorization=access_token
+            ), data=invalid_category, content_type='application/json')
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 422)
+            self.assertEqual(response_data['message'], "You entered some invalid details.")
+            errors = response_data['errors']
+            self.assertTrue(
+                'category_name' in errors
+            )
+            self.assertEqual(
+                errors['category_name'][0], 'Name too short. Should be 3 or more characters.'
+            )
+            # Ensure that category name is of a valid format
+            response = self.client.post('/category', headers=dict(
+                Authorization=access_token
+            ), data=invalid_category_2, content_type='application/json')
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 422)
+            self.assertEqual(response_data['message'], "You entered some invalid details.")
+            errors = response_data['errors']
+            self.assertTrue(
+                'category_name' in errors
+            )
+            self.assertEqual(
+                errors['category_name'][0],
+                "Name should only contain letters, an underscore and/or a period."
+            )
+
+    def test_category_creation_invalid_description(self):
+        """Ensures category cannot be created with an invalid description"""
+
+        with self.client:
+            register_resp = register_user(self)
+            self.assertEqual(register_resp.status_code, 201)
+            login_resp = login_user(self)
+            self.assertEqual(login_resp.status_code, 200)
+            access_token = json.loads(login_resp.data.decode())['access_token']
+            # Ensure that category description is of a valid length
+            response = self.client.post('/category', headers=dict(
+                Authorization=access_token
+            ), data=invalid_category, content_type='application/json')
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 422)
+            self.assertEqual(response_data['message'], "You entered some invalid details.")
+            errors = response_data['errors']
+            self.assertTrue(
+                'category_name' in errors
+            )
+            self.assertEqual(
+                errors['description'][0], 'Description should not be more than 50 characters long.'
+            )
+            # Ensure that category name is of a valid format
+            response = self.client.post('/category', headers=dict(
+                Authorization=access_token
+            ), data=invalid_category_2, content_type='application/json')
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 422)
+            self.assertEqual(response_data['message'], "You entered some invalid details.")
+            errors = response_data['errors']
+            self.assertTrue(
+                'description' in errors
+            )
+            self.assertEqual(
+                errors['description'][0],
+                "You need to provide a valid description."
+            )
+
     def test_category_duplication(self):
-        """Ensures category can be created"""
+        """Ensures category cannot be duplicated"""
 
         with self.client:
             # Register and login test user
@@ -184,7 +263,7 @@ class CategoryTestCase(BaseTestCase):
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['status'], "Success!")
             self.assertTrue(len(response_data['categories']) == 1)
-            self.assertEqual(response_data['categories'][0]['category_name'], "Cookies")
+            self.assertEqual(response_data['categories'][0]['category_name'], "cookies")
 
             # Attempt retrieval of non-existent category
             response = test_client.get(

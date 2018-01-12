@@ -5,7 +5,8 @@ from instance.config import app_config
 from app import APP
 from app.models import db, User, BlacklistToken
 
-from .helpers import register_user
+from .helpers import register_user, user_details_inv_email,\
+                     user_details_inv_username, user_details_inv_username_2
 
 # pylint: disable=C0103
 # pylint: disable=E1101
@@ -59,6 +60,97 @@ class AuthNSTestCase(BaseTestCase):
             self.assertTrue(response.content_type == 'application/json')
             self.assertEqual(response.status_code, 400)
 
+    def test_registration_with_invalid_email(self):
+        """ Test for user registration """
+        with self.client:
+            response = register_user(self, user_data=user_details_inv_email)
+            data = json.loads(response.data.decode())
+            self.assertTrue(
+                data['message'] == 'You provided some invalid details.'
+            )
+            self.assertTrue(
+                'email' in data['errors']
+            )
+            self.assertTrue(response.content_type == 'application/json')
+            self.assertEqual(response.status_code, 422)
+
+    def test_registration_with_invalid_username(self):
+        """ Test for user registration """
+        with self.client:
+            # When the username has special characters
+            response = register_user(self, user_data=user_details_inv_username)
+            data = json.loads(response.data.decode())
+            self.assertTrue(
+                data['message'] == 'You provided some invalid details.'
+            )
+            errors = data['errors']
+            self.assertTrue(
+                'username' in errors
+            )
+            self.assertEqual(
+                errors['username'][0], 'Username should only contain letters and numbers.'
+            )
+            self.assertTrue(response.content_type == 'application/json')
+            self.assertEqual(response.status_code, 422)
+
+            # When the username is of invalid length
+            response = register_user(self, user_data=user_details_inv_username_2)
+            data = json.loads(response.data.decode())
+            self.assertTrue(
+                data['message'] == 'You provided some invalid details.'
+            )
+            errors = data['errors']
+            self.assertTrue(
+                'username' in errors
+            )
+            self.assertEqual(
+                errors['username'][0], 'Username should be 3 or more characters long.'
+            )
+            self.assertTrue(response.content_type == 'application/json')
+            self.assertEqual(response.status_code, 422)
+
+    def test_registration_with_invalid_passowrd(self):
+        """ Test for user registration with an invalid password """
+        with self.client:
+            # Ensure user can't register with a password that is less than
+            # 8 characters long
+            user_details = dict(
+                email="some@person.com",
+                username="some_user",
+                password="pass"
+            )
+            response = register_user(self, user_data=user_details)
+            data = json.loads(response.data.decode())
+            self.assertTrue(
+                data['message'] == 'You provided some invalid details.'
+            )
+            errors = data['errors']
+            self.assertTrue(
+                'password' in errors
+            )
+            self.assertEqual(
+                errors['password'][0], 'Password should be 8 characters or longer.'
+            )
+            self.assertTrue(response.content_type == 'application/json')
+            self.assertEqual(response.status_code, 422)
+
+            # When the password has space character
+            user_details['password'] = "   some_pass"
+            response = register_user(self, user_data=user_details)
+            data = json.loads(response.data.decode())
+            self.assertTrue(
+                data['message'] == 'You provided some invalid details.'
+            )
+            errors = data['errors']
+            self.assertTrue(
+                'password' in errors
+            )
+            self.assertEqual(
+                errors['password'][0], 'Password should not have spaces.'
+            )
+            self.assertTrue(response.content_type == 'application/json')
+            self.assertEqual(response.status_code, 422)
+
     def test_login_without_credentials(self):
         """Test login resource without any credentials supplied"""
         with self.client:
@@ -87,7 +179,7 @@ class AuthNSTestCase(BaseTestCase):
                 '/auth/login',
                 data=json.dumps(dict(
                     email='isaac@yum.my',
-                    password='123456'
+                    password='1234509876'
                 )),
                 content_type='application/json'
             )
@@ -104,7 +196,7 @@ class AuthNSTestCase(BaseTestCase):
                 '/auth/login',
                 data=json.dumps(dict(
                     email='joe@yum.my',
-                    password='123456'
+                    password='1234509876'
                 )),
                 content_type='application/json'
             )
@@ -153,7 +245,7 @@ class AuthNSTestCase(BaseTestCase):
                 '/auth/login',
                 data=json.dumps(dict(
                     email='isaac@yum.my',
-                    password='123456'
+                    password='1234509876'
                 )),
                 content_type='application/json'
             )
@@ -191,7 +283,7 @@ class AuthNSTestCase(BaseTestCase):
                 '/auth/login',
                 data=json.dumps(dict(
                     email='isaac@yum.my',
-                    password='123456'
+                    password='1234509876'
                 )),
                 content_type='application/json'
             )
@@ -232,7 +324,7 @@ class AuthNSTestCase(BaseTestCase):
                 '/auth/login',
                 data=json.dumps(dict(
                     email='isaac@yum.my',
-                    password='123456'
+                    password='1234509876'
                 )),
                 content_type='application/json'
             )
@@ -246,7 +338,7 @@ class AuthNSTestCase(BaseTestCase):
                 '/auth/reset-password',
                 data=json.dumps(dict(
                     public_id=public_id,
-                    current_password='123456',
+                    current_password='1234509876',
                     new_password='12345678',
                 )),
                 content_type='application/json'
@@ -262,7 +354,7 @@ class AuthNSTestCase(BaseTestCase):
                 '/auth/reset-password',
                 data=json.dumps(dict(
                     public_id=public_id,
-                    current_password='123456',
+                    current_password='1234509876',
                     new_password='12345678',
                 )),
                 content_type='application/json'
@@ -278,7 +370,7 @@ class AuthNSTestCase(BaseTestCase):
                 '/auth/reset-password',
                 data=json.dumps(dict(
                     public_id="public_id",
-                    current_password='123456',
+                    current_password='1234509876',
                     new_password='12345678',
                 )),
                 content_type='application/json'

@@ -3,10 +3,11 @@ import sys
 from flask import request, jsonify, make_response
 from flask_restplus import Resource
 
-from .auth import authorization_required
-from .models import db, Category
-from .serializers import category
-from .restplus import API
+from app.models import db, Category
+from app.serializers import category
+from app.restplus import API
+from app.helpers import authorization_required
+from app.helpers.validators import CategorySchema
 
 # Linting exceptions
 
@@ -37,12 +38,26 @@ class CategoryHandler(Resource):
             # get request data
             data = request.get_json()
 
+            # initialize validation schema
+            category_schema = CategorySchema()
+
+            data, errors = category_schema.load(data)
+
+            if errors:
+                reponse_obj = dict(
+                    message='You entered some invalid details.',
+                    errors=errors
+                )
+                return make_response(jsonify(reponse_obj), 422)
+
+            category_name = data['category_name'].lower()
+
             # check if category exists
             existing_category = current_user.categories.filter_by(
-                name=data['category_name']
+                name=category_name
             ).first()
             if not existing_category:
-                name = data['category_name']
+                name = category_name
                 owner = current_user.id
                 description = data['description']
 
