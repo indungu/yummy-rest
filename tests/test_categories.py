@@ -214,6 +214,53 @@ class CategoryTestCase(BaseTestCase):
             response_data = json.loads(response.data.decode())
             self.assertTrue(len(response_data['categories']) == 1)
 
+    def test_category_view_with_searcha_and_pagination(self):
+        """Ensure a registered/logged in user can view their categories"""
+
+        with self.client as test_client:
+            register_resp = register_user(self)
+            self.assertEqual(register_resp.status_code, 201)
+            login_resp = login_user(self)
+            self.assert200(login_resp, "User not logged in")
+            login_resp_data = json.loads(login_resp.data.decode())
+            auth_header = dict(
+                Authorization=login_resp_data['access_token']
+            )
+            # Add a test categories
+            category_resp = self.client.post(
+                '/category',
+                headers=auth_header,
+                data=test_category,
+                content_type='application/json'
+            )
+            self.assertEqual(category_resp.status_code, 201)
+            category_resp = self.client.post(
+                '/category',
+                headers=auth_header,
+                data=test_category_update,
+                content_type='application/json'
+            )
+            self.assertEqual(category_resp.status_code, 201)
+            # Default get without any search or pagination parameters defined
+            response = test_client.get(
+                '/category', headers=auth_header, content_type='application/json'
+            )
+            self.assert200(response, "Categories not retrieved")
+            response_data = json.loads(response.data.decode())
+            self.assertTrue(len(response_data['categories']) == 2)
+            self.assertTrue('page_details' in response_data)
+            self.assertEqual(response_data['page_details']['pages'], 1)
+            # When only pagination args are defined
+            response = test_client.get(
+                '/category?page=1&per_page=1', headers=auth_header, content_type='application/json'
+            )
+            self.assert200(response, "Categories not retrieved")
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(len(response_data['categories']), 1)
+            self.assertEqual(response_data['categories'][0]['category_name'], "cookies")
+            self.assertTrue('page_details' in response_data)
+            self.assertEqual(response_data['page_details']['pages'], 2)
+
     def test_single_category_retrieval(self):
         """Ensures that a single category can be retrieved"""
 

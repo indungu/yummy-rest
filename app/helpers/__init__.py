@@ -72,3 +72,19 @@ def _clean_name(name):
 
     name = re.sub(r'\s', "_", name)
     return name.lower()
+
+# Pagination details
+def _pagination(paginate):
+    """
+    :param pginate: a instance of the Pagination class with paginated query results
+
+    :returns pagination_details: a Python dictionary with various pagination details.
+    """
+
+    pagination_details = dict(
+        pages=paginate.pages,
+        previous_page=paginate.prev_num,
+        next_page=paginate.next_num,
+        item_count=len(paginate.items)
+    )
+    return pagination_details

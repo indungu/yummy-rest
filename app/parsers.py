@@ -1,10 +1,32 @@
 """Arguement parsers"""
 
-from flask_restplus import reqparse
+from webargs import fields
 
-# Linting exceptions
+# Lint exception
 
-# pylint: disable=C0103
+# pylint: disable=E1101
 
-auth_header = reqparse.RequestParser()
-auth_header.add_argument('Authorization', type=str, location='headers', required=True)
+# Args validation parser
+SEARCH_PAGE_ARGS = {
+    'q': fields.String(),
+    'page': fields.Integer(),
+    'per_page': fields.Integer()
+}
+
+# args documentation helper function
+def _make_args_parser(namespace):
+    """
+    This function receives a namespace object and returns
+    a parser that can be documented for a particular enpoint/resource
+
+    :param object of :class: Namespace:
+    :returns object of :class: RequestParser:
+    """
+
+    args_parser = namespace.parser()
+    args_parser.add_argument('q', type=str, help='Search query string', location='url')
+    args_parser.add_argument('page', default=1, type=int, help='Active page', location='url')
+    args_parser.add_argument(
+        'per_page', default=5, type=int, help="The number of items to display", location='url'
+    )
+    return args_parser

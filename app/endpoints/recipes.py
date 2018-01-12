@@ -1,12 +1,14 @@
 """The recipes endpoints"""
 from flask import request, jsonify, make_response
 from flask_restplus import Resource
+from webargs.flaskparser import parser
 
 from app.models import db, Recipe
 from app.serializers import recipe
 from app.restplus import API
-from app.helpers import authorization_required, _clean_name
+from app.helpers import authorization_required, _clean_name, _pagination
 from app.helpers.validators import RecipeSchema
+from app.parsers import SEARCH_PAGE_ARGS, _make_args_parser
 
 # Linting exceptions
 
@@ -20,6 +22,7 @@ recipes_ns = API.namespace(
     path='/category/<int:category_id>/recipes'
 )
 
+args_parser = _make_args_parser(recipes_ns)
 @recipes_ns.route('')
 class GeneralRecipesHandler(Resource):
     """
@@ -46,9 +49,7 @@ class GeneralRecipesHandler(Resource):
             return make_response(resp_obj, 401)
 
         data = request.get_json()
-        print(data)
         data['recipe_name'] = _clean_name(data['recipe_name'])
-        print(data)
 
         # initialize schema object for input validation
         recipe_schema = RecipeSchema()
@@ -57,7 +58,7 @@ class GeneralRecipesHandler(Resource):
         data, errors = recipe_schema.load(data)
         print(data, errors)
 
-        # Raise input error notification
+        # Raise input validation error notification
         if errors:
             response_obj = dict(
                 message="You provided some invalid details.",
@@ -107,6 +108,7 @@ class GeneralRecipesHandler(Resource):
         return make_response(resp_obj, 400)
 
     @authorization_required
+    @recipes_ns.expect(args_parser)
     def get(current_user, self, category_id):
         """
         Retrives a list of the recipes for the category
@@ -138,8 +140,24 @@ class GeneralRecipesHandler(Resource):
                 resp_obj = jsonify(resp_obj)
                 return make_response(resp_obj, 200)
 
+            # search and/or paginate
+            args = parser.parse(SEARCH_PAGE_ARGS, request)
+            if args:
+                try:
+                    recipes = category.recipes.filter(
+                        Recipe.name.ilike("%" + args['q'] + "%")
+                    ).paginate(page=args['page'], per_page=args['per_page'])
+                except KeyError:
+                    try:
+                        recipes = category.recipes.\
+                        paginate(page=args['page'], per_page=args['per_page'])
+                    except KeyError:
+                        recipes = category.recipes.paginate(error_out=False)
+            else:
+                recipes = category.recipes.paginate(error_out=False)
+            pagination_details = _pagination(recipes)
             user_recipes = []
-            for a_recipe in recipes:
+            for a_recipe in recipes.items:
                 rec = dict(
                     recipe_name=a_recipe.name,
                     recipe_ingredients=a_recipe.ingredients,
@@ -151,7 +169,8 @@ class GeneralRecipesHandler(Resource):
 
             resp_obj = {
                 "status": "Success!",
-                "recipes": user_recipes
+                "recipes": user_recipes,
+                "page_details": pagination_details
             }
             resp_obj = jsonify(resp_obj)
             return make_response(resp_obj, 200)
