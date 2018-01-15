@@ -2,6 +2,7 @@
 This Test suite houses the category endpoint tests
 """
 import json
+from app.helpers import _clean_name
 from .test_auth import BaseTestCase
 
 # Linting exceptions
@@ -29,7 +30,7 @@ class CategoryTestCase(BaseTestCase):
             ), data=test_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 201)
-            self.assertEqual(response_data['status'], "Success!")
+            self.assertIn("category_name", response_data['categories'][0])
 
     def test_category_creation_invalid_name(self):
         """Ensures category cannot be created with an invalid name"""
@@ -46,7 +47,6 @@ class CategoryTestCase(BaseTestCase):
             ), data=invalid_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 422)
-            self.assertEqual(response_data['message'], "You entered some invalid details.")
             errors = response_data['errors']
             self.assertTrue(
                 'category_name' in errors
@@ -60,7 +60,6 @@ class CategoryTestCase(BaseTestCase):
             ), data=invalid_category_2, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 422)
-            self.assertEqual(response_data['message'], "You entered some invalid details.")
             errors = response_data['errors']
             self.assertTrue(
                 'category_name' in errors
@@ -85,7 +84,6 @@ class CategoryTestCase(BaseTestCase):
             ), data=invalid_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 422)
-            self.assertEqual(response_data['message'], "You entered some invalid details.")
             errors = response_data['errors']
             self.assertTrue(
                 'category_name' in errors
@@ -99,7 +97,6 @@ class CategoryTestCase(BaseTestCase):
             ), data=invalid_category_2, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 422)
-            self.assertEqual(response_data['message'], "You entered some invalid details.")
             errors = response_data['errors']
             self.assertTrue(
                 'description' in errors
@@ -126,14 +123,12 @@ class CategoryTestCase(BaseTestCase):
             ), data=test_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 201)
-            self.assertEqual(response_data['status'], "Success!")
             # Attempt a duplication of the same category
             response = self.client.post('/category', headers=dict(
                 Authorization=access_token
             ), data=test_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 400)
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "The category already exists!")
 
     def test_unauthorized_category_creation(self):
@@ -146,7 +141,6 @@ class CategoryTestCase(BaseTestCase):
             )
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 401)
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Please provide an access token!")
             # Ensure that access is only granted when the right access token is provided (on login)
             response = self.client.post(
@@ -155,7 +149,6 @@ class CategoryTestCase(BaseTestCase):
             )
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 401)
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Login to use this resource!")
 
     def test_category_view_unregistered_user(self):
@@ -166,7 +159,6 @@ class CategoryTestCase(BaseTestCase):
             response = self.client.get('/category', content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 401)
-            self.assertTrue(response_data['status'] == "Fail!")
             self.assertTrue(response_data['message'] == "Please provide an access token!")
             # When user provides invalid access token
             access_token = "some_funny_token_/$tring/"
@@ -176,7 +168,6 @@ class CategoryTestCase(BaseTestCase):
             )
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 401)
-            self.assertTrue(response_data['status'] == "Fail!")
             self.assertEqual(response_data['message'], "Login to use this resource!")
 
     def test_category_view_registered_user(self):
@@ -196,8 +187,7 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
-            self.assertTrue(response_data['message'] == "Success!")
-            self.assertTrue(len(response_data['categories']) == 0)
+            self.assertTrue(response_data['message'] == "No categories exist. Please create some.")
             # Create a test category
             category_resp = self.client.post(
                 '/category',
@@ -214,7 +204,7 @@ class CategoryTestCase(BaseTestCase):
             response_data = json.loads(response.data.decode())
             self.assertTrue(len(response_data['categories']) == 1)
 
-    def test_category_view_with_searcha_and_pagination(self):
+    def test_category_view_with_search_and_pagination(self):
         """Ensure a registered/logged in user can view their categories"""
 
         with self.client as test_client:
@@ -288,7 +278,6 @@ class CategoryTestCase(BaseTestCase):
             response = test_client.get('/category/1', content_type='application/json')
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Please provide an access token!")
 
             # Attempt access with invalid token
@@ -299,7 +288,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Invalid token. Login to use this resource!")
 
             # Ensure single category can be retrieved
@@ -308,7 +296,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
             self.assertTrue(len(response_data['categories']) == 1)
             self.assertEqual(response_data['categories'][0]['category_name'], "cookies")
 
@@ -318,7 +305,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 404)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Sorry, category does not exist!")
 
     def test_single_category_update(self):
@@ -351,7 +337,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Please provide an access token!")
 
             # Attempt access with invalid token
@@ -363,7 +348,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Invalid token. Login to use this resource!")
 
             # Ensure single category can be updated
@@ -373,7 +357,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
             self.assertTrue(len(response_data['categories']) == 1)
             self.assertEqual(response_data['categories'][0]['category_name'], "Pies")
 
@@ -384,7 +367,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 404)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Sorry, category does not exist!")
 
     def test_single_category_delete(self):
@@ -416,7 +398,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Please provide an access token!")
 
             # Attempt access with invalid token
@@ -427,7 +408,6 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Invalid token. Login to use this resource!")
 
             # Ensure single category can be deleted
@@ -436,7 +416,12 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
+            self.assertEqual(
+                response_data['message'],
+                "Category '{}' was deleted successfully.".format(
+                    _clean_name(json.loads(test_category)['category_name'])
+                )
+            )
 
             # Attempt delete of non-existent category
             response = test_client.delete(
@@ -444,5 +429,4 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 404)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Sorry, category does not exist!")

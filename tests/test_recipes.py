@@ -47,7 +47,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert401(response, "Wrong reponse code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], "Please provide an access token!")
             # test the resource with invalid authorization
             response = test_client.post(
@@ -56,7 +55,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert401(response, "Wrong reponse code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Invalid token. Login to use this resource!')
 
     def test_recipe_creation_invalid_category(self):
@@ -75,7 +73,6 @@ class RecipesTestCase(BaseTestCase):
             self.assert400(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['message'], 'Invalid category!')
-            self.assertEqual(response_data['status'], 'Fail!')
 
     def test_recipe_creation_valid_category(self):
         """
@@ -91,7 +88,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 201)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Success!')
             self.assertEqual(len(response_data['recipes']), 1)
 
     def test_recipe_creation_valid_category_invalid_name(self):
@@ -151,7 +147,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 201)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Success!')
             self.assertEqual(len(response_data['recipes']), 1)
             # Duplicate recipe
             response = test_client.post(
@@ -160,7 +155,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assertEqual(response.status_code, 400)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Recipe already exists!')
 
     def test_recipes_view_resource_security(self):
@@ -175,7 +169,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], "Please provide an access token!")
             # Ensure no access with invalid authorization
             response = test_client.get(
@@ -184,7 +177,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert401(response, "Wrong reponse code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Invalid token. Login to use this resource!')
 
     def test_recipes_view(self):
@@ -201,7 +193,6 @@ class RecipesTestCase(BaseTestCase):
             )
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['message'], 'No recipes added to this category yet!')
-            self.assertEqual(response_data['status'], 'Success!')
             # Add test recipe
             add_recipe_resp = test_client.post(
                 '/category/1/recipes', headers=self.auth_header,
@@ -217,7 +208,6 @@ class RecipesTestCase(BaseTestCase):
                 content_type='application/json'
             )
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Success!')
             self.assertEqual(len(response_data['recipes']), 1)
 
             # Attempt retrieval from an invalid category
@@ -227,7 +217,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert400(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Invalid category!')
 
     def test_single_recipe_retrival_resource_security(self):
@@ -242,7 +231,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Please provide an access token!')
             # Attempt access with invalid authorization
             response = test_client.get(
@@ -251,7 +239,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(
                 response_data['message'],
                 'Invalid token. Login to use this resource!'
@@ -281,7 +268,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert200(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
             self.assertEqual(len(response_data['recipes']), 1)
 
             # retrieve recipe from a valid category with an
@@ -292,7 +278,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Recipe does not exist!")
 
             # retrieve recipe from an invalid category with a
@@ -303,7 +288,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Category does not exist!")
 
     def test_single_recipe_update_resource_security(self):
@@ -318,7 +302,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Please provide an access token!')
 
             # Attempt access with invalid authorization
@@ -328,7 +311,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(
                 response_data['message'],
                 'Invalid token. Login to use this resource!'
@@ -358,7 +340,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert200(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
             self.assertEqual(len(response_data['recipes']), 1)
             self.assertEqual(response_data['recipes'][0]['recipe_name'], 'Mint Chocolate chip')
 
@@ -370,7 +351,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Recipe does not exist!")
 
             # Update recipe from an valid category with a
@@ -381,7 +361,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Category does not exist!")
 
     def test_single_recipe_delete_resource_security(self):
@@ -396,7 +375,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Please provide an access token!')
             # Attempt access with invalid authorization
             response = test_client.delete(
@@ -405,7 +383,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(
                 response_data['message'],
                 'Invalid token. Login to use this resource!'
@@ -435,7 +412,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert200(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
             self.assertEqual(len(response_data['recipes']), 1)
 
             # Delete recipe from a valid category with a
@@ -446,7 +422,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert200(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
             self.assertEqual(
                 response_data['message'], 'Recipe chocolate_chip was deleted successfully!'
             )
@@ -459,7 +434,6 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Recipe does not exist!")
 
             # Delete recipe from an invalid category with a
@@ -470,5 +444,4 @@ class RecipesTestCase(BaseTestCase):
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Category does not exist!")
