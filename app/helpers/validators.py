@@ -115,3 +115,25 @@ class CategorySchema(Schema):
 
     category_name = fields.Str(required=True, validate=validate_name)
     description = fields.Str(required=True, validate=validate_description)
+
+def validate_input(data):
+    """
+    Checks if the input data is valid and not just a series of whitespace
+    characters
+    """
+
+    input_re = re.compile(r"\s")
+    valid = re.sub(input_re, '', data)
+    if not valid:
+        raise ValidationError(
+            "Invalid input value."
+        )
+
+class RecipeSchema(Schema):
+    """
+    Validates the input recipe details
+    """
+
+    recipe_name = fields.Str(required=True, validate=validate_name)
+    ingredients = fields.Str(required=True, validate=validate_input)
+    description = fields.Str(required=True, validate=validate_input)

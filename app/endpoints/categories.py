@@ -2,14 +2,16 @@
 import sys
 from flask import request, jsonify, make_response
 from flask_restplus import Resource
+from webargs.flaskparser import parser
 
-from app.models import db, Category
-from app.serializers import category
-from app.restplus import API
-from app.helpers import authorization_required
+from app.helpers import authorization_required, _pagination
 from app.helpers.validators import CategorySchema
+from app.models import db, Category
+from app.parsers import SEARCH_PAGE_ARGS, _make_args_parser
+from app.restplus import API
+from app.serializers import category
 
-# Linting exceptions
+# Lint exceptions
 
 # pylint: disable=C0103
 # pylint: disable=W0702
@@ -24,6 +26,8 @@ categories_ns = API.namespace(
     'category', description='Contains endpoints for recipe categories.',
     path='/category'
 )
+
+args_parser = _make_args_parser(categories_ns)
 
 @categories_ns.route('')
 class CategoryHandler(Resource):
@@ -99,14 +103,30 @@ class CategoryHandler(Resource):
         resp_obj = jsonify(resp_obj)
         return make_response(resp_obj, 401)
 
+    @categories_ns.expect(args_parser)
     @authorization_required
     def get(current_user, self):
         """Returns a list of user's recipe categories"""
 
         if current_user:
-            all_categories = Category.query.filter_by(user_id=current_user.id)
+            # parse args if provided
+            args = parser.parse(SEARCH_PAGE_ARGS, request)
+            if args:
+                try:
+                    all_categories = current_user.categories.filter(
+                        Category.name.ilike("%" + args['q'] + "%")
+                    ).paginate(page=args['page'], per_page=args['per_page'])
+                except KeyError:
+                    try:
+                        all_categories = current_user.categories. \
+                        paginate(page=args['page'], per_page=args['per_page'])
+                    except KeyError:
+                        all_categories = current_user.categories.paginate(error_out=False)
+            else:
+                all_categories = current_user.categories.paginate(error_out=False)
+            pagination_details = _pagination(all_categories)
             categories = []
-            for cat in all_categories:
+            for cat in all_categories.items:
                 catg = dict(
                     category_id=cat.id,
                     category_name=cat.name,
@@ -117,7 +137,8 @@ class CategoryHandler(Resource):
                 categories.append(catg)
             resp_obj = {
                 "categories": categories,
-                "message": "Success!"
+                "message": "Success!",
+                "page_details": pagination_details
             }
             return make_response(jsonify(resp_obj), 200)
         resp_obj = dict(
