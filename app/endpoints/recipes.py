@@ -58,11 +58,11 @@ class GeneralRecipesHandler(Resource):
 
         # Raise input validation error notification
         if errors:
-            response_obj = dict(
+            response_payload = dict(
                 message="You provided some invalid details.",
                 errors=errors
             )
-            return make_response(jsonify(response_obj), 422)
+            return make_response(jsonify(response_payload), 422)
 
         category = current_user.categories.filter_by(id=category_id).first()
         if category:
@@ -81,7 +81,6 @@ class GeneralRecipesHandler(Resource):
                 db.session.commit()
 
                 response_payload = {
-                    'status': 'Success!',
                     'recipes': [dict(
                         recipe_id=new_recipe.id,
                         recipe_name=new_recipe.name,
@@ -132,7 +131,6 @@ class GeneralRecipesHandler(Resource):
 
             if not recipes:
                 response_payload = dict(
-                    status='Success!',
                     message='No recipes added to this category yet!'
                 )
                 response_payload = jsonify(response_payload)
@@ -140,36 +138,39 @@ class GeneralRecipesHandler(Resource):
 
             # search and/or paginate
             args = parser.parse(SEARCH_PAGE_ARGS, request)
-            if args:
+            if 'q' in args:
                 try:
-                    recipes = category.recipes.filter(
+                    recipes = current_user.recipes.filter(
                         Recipe.name.ilike("%" + args['q'] + "%")
-                    ).paginate(page=args['page'], per_page=args['per_page'])
+                    ).paginate(page=args['page'], per_page=args['per_page'], error_out=False)
                 except KeyError:
-                    try:
-                        recipes = category.recipes.\
-                        paginate(page=args['page'], per_page=args['per_page'])
-                    except KeyError:
-                        recipes = category.recipes.paginate(error_out=False)
+                    recipes = current_user.recipes.filter(
+                        Recipe.name.ilike("%" + args['q'] + "%")
+                    ).paginate(page=1, per_page=5)
             else:
                 recipes = category.recipes.paginate(error_out=False)
             pagination_details = _pagination(recipes)
             user_recipes = []
-            for a_recipe in recipes.items:
-                rec = dict(
-                    recipe_id=a_recipe.id,
-                    recipe_name=a_recipe.name,
-                    recipe_ingredients=a_recipe.ingredients,
-                    recipe_description=a_recipe.description,
-                    date_created=a_recipe.created_on,
-                    date_modified=a_recipe.updated_on,
+            for current_recipe in recipes.items:
+                user_recipe = dict(
+                    category_id=current_recipe.category_id,
+                    recipe_id=current_recipe.id,
+                    recipe_name=current_recipe.name,
+                    recipe_ingredients=current_recipe.ingredients,
+                    recipe_description=current_recipe.description,
+                    date_created=current_recipe.created_on,
+                    date_modified=current_recipe.updated_on,
                 )
-                user_recipes.append(rec)
-
-            response_payload = {
-                "recipes": user_recipes,
-                "page_details": pagination_details
-            }
+                user_recipes.append(user_recipe)
+            if user_recipes:
+                response_payload = {
+                    "recipes": user_recipes,
+                    "page_details": pagination_details
+                }
+            else:
+                response_payload = {
+                    "message": "Page does not exist."
+                }
             response_payload = jsonify(response_payload)
             return make_response(response_payload, 200)
         response_payload = dict(
@@ -267,28 +268,43 @@ class SingleRecipeHandler(Resource):
 
             # Get request data
             request_payload = request.get_json()
+            new_recipe_name = _clean_name(request_payload['recipe_name'])
 
-            # Update recipe
-            selected_recipe.name = request_payload['recipe_name']
-            selected_recipe.ingredients = request_payload['ingredients']
-            selected_recipe.description = request_payload['description']
+            # Check if name provided is of an existing recipe
+            existing_recipe = current_user.recipes.filter(
+                Recipe.name == new_recipe_name,
+                Recipe.id != selected_recipe.id
+            ).first()
+            if not existing_recipe:
+                if new_recipe_name != selected_recipe.name:
+                    old_recipe_name = selected_recipe.name
+                    # Update recipe
+                    selected_recipe.name = new_recipe_name
+                    selected_recipe.ingredients = request_payload['ingredients']
+                    selected_recipe.description = request_payload['description']
 
-            db.session.commit()
+                    db.session.commit()
 
-            # Return the updated recipe
-            response_payload = {
-                "recipes": [dict(
-                    recipe_id=selected_recipe.id,
-                    recipe_name=selected_recipe.name,
-                    recipe_ingredients=selected_recipe.ingredients,
-                    recipe_description=selected_recipe.description,
-                    date_created=selected_recipe.created_on,
-                    date_updated=selected_recipe.updated_on,
-                    category_name=category.name
-                )]
-            }
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 200)
+                    # Return appropriate message saying the recipe was updated
+                    response_payload = {
+                        "message": "Recipe '{}' was successfully updated to '{}'.".format(
+                            old_recipe_name, new_recipe_name
+                        )
+                    }
+                else:
+                    selected_recipe.ingredients = request_payload['ingredients']
+                    selected_recipe.description = request_payload['description']
+
+                    db.session.commit()
+
+                    # Return appropriate message saying the recipe was updated
+                    response_payload = {
+                        "message": "Recipe '{}' was successfully updated.".format(
+                            selected_recipe.name
+                        )
+                    }
+                response_payload = jsonify(response_payload)
+                return make_response(response_payload, 200)
         # When an invalid category id is provided
         response_payload = dict(
             message='Category does not exist!'

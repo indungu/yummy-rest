@@ -105,17 +105,15 @@ class CategoryHandler(Resource):
             jsonify({'message': 'No categories exist. Please create some.'}))
             # parse args if provided
             args = parser.parse(SEARCH_PAGE_ARGS, request)
-            if args:
+            if 'q' in args:
                 try:
                     all_categories = current_user.categories.filter(
                         Category.name.ilike("%" + args['q'] + "%")
-                    ).paginate(page=args['page'], per_page=args['per_page'])
+                    ).paginate(page=args['page'], per_page=args['per_page'], error_out=False)
                 except KeyError:
-                    try:
-                        all_categories = current_user.categories. \
-                        paginate(page=args['page'], per_page=args['per_page'])
-                    except KeyError:
-                        all_categories = current_user.categories.paginate(error_out=False)
+                    all_categories = current_user.categories.filter(
+                        Category.name.ilike("%" + args['q'] + "%")
+                    ).paginate(page=1, per_page=5)
             else:
                 all_categories = current_user.categories.paginate(error_out=False)
             pagination_details = _pagination(all_categories)
@@ -129,10 +127,15 @@ class CategoryHandler(Resource):
                     date_updated=cat.updated_on
                 )
                 categories.append(catg)
-            response_payload = {
-                "categories": categories,
-                "page_details": pagination_details
-            }
+            if categories:
+                response_payload = {
+                    "categories": categories,
+                    "page_details": pagination_details
+                }
+            else:
+                response_payload = {
+                    "message": "Page does not exist."
+                }
             return make_response(jsonify(response_payload), 200)
         response_payload = dict(
             message='Login to use this resource!'
@@ -162,7 +165,7 @@ class SingleCategoryResource(Resource):
             return make_response(response_payload, 401)
 
         # retrieve specified category
-        specified_category = Category.query.filter_by(id=id).first()
+        specified_category = current_user.categories.filter_by(id=id).first()
 
         if specified_category:
             response_payload = {
@@ -204,22 +207,43 @@ class SingleCategoryResource(Resource):
             # Get request data
             request_payload = request.get_json()
 
-            # Update category specfied category
-            specified_category.name = request_payload['category_name']
-            specified_category.description = request_payload['description']
-            db.session.commit()
+            # format new name
+            new_category_name = _clean_name(request_payload['category_name'])
 
-            response_payload = {
-                "categories": [dict(
-                    category_id=specified_category.id,
-                    category_name=specified_category.name,
-                    description=specified_category.description,
-                    date_created=specified_category.created_on,
-                    date_updated=specified_category.updated_on
-                )]
-            }
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 200)
+            # Ensure the category name does not match that any of the user's
+            # existing category apart from the one they are editing
+            existing_category = current_user.categories.filter(
+                Category.name == _clean_name(request_payload['category_name']),
+                Category.id != specified_category.id
+            ).first()
+
+            # return appropriate response
+            if not existing_category:
+                if new_category_name != specified_category.name:
+                    old_category_name = specified_category.name
+                    specified_category.name = new_category_name
+                    specified_category.description = request_payload['description']
+                    db.session.commit()
+                    response_payload = dict(
+                        message="Category '{}' was successfully updated to '{}'.".format(
+                            old_category_name, specified_category.name
+                        )
+                    )
+                else:
+                    specified_category.description = request_payload['description']
+                    db.session.commit()
+                    response_payload = dict(
+                        message="Category '{}' was successfully updated.".format(
+                            specified_category.name
+                        )
+                    )
+                response_payload = jsonify(response_payload)
+                return make_response(response_payload, 200)
+            response_payload = dict(
+                message="Category already exists, please use a different name."
+            )
+            return make_response(jsonify(response_payload), 401)
+
         response_payload = dict(
             message="Sorry, category does not exist!"
         )

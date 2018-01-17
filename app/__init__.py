@@ -1,5 +1,5 @@
 """Main APP module"""
-from flask import Flask, make_response, jsonify
+from flask import Flask, make_response, jsonify, redirect
 from flask_sqlalchemy import SQLAlchemy
 
 # Linting exception
@@ -30,6 +30,13 @@ def resource_not_found(error):
                  "If you entered the URL manually please check your spelling and try again."
     )
     return make_response(jsonify(response_payload), 404)
+
+@APP.route('/', methods=['GET'])
+def redirect_to_docs():
+    """
+    Redirects root to API docs
+    """
+    return redirect('/api/v1/docs')
 
 db.init_app(APP)
 

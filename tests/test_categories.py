@@ -25,7 +25,7 @@ class CategoryTestCase(BaseTestCase):
             login_resp = login_user(self)
             self.assertEqual(login_resp.status_code, 200)
             access_token = json.loads(login_resp.data.decode())['access_token']
-            response = self.client.post('/category', headers=dict(
+            response = self.client.post('/api/v1/category', headers=dict(
                 Authorization=access_token
             ), data=test_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
@@ -42,7 +42,7 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(login_resp.status_code, 200)
             access_token = json.loads(login_resp.data.decode())['access_token']
             # Ensure that category name is of a valid length
-            response = self.client.post('/category', headers=dict(
+            response = self.client.post('/api/v1/category', headers=dict(
                 Authorization=access_token
             ), data=invalid_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
@@ -55,7 +55,7 @@ class CategoryTestCase(BaseTestCase):
                 errors['category_name'][0], 'Name too short. Should be 3 or more characters.'
             )
             # Ensure that category name is of a valid format
-            response = self.client.post('/category', headers=dict(
+            response = self.client.post('/api/v1/category', headers=dict(
                 Authorization=access_token
             ), data=invalid_category_2, content_type='application/json')
             response_data = json.loads(response.data.decode())
@@ -79,7 +79,7 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(login_resp.status_code, 200)
             access_token = json.loads(login_resp.data.decode())['access_token']
             # Ensure that category description is of a valid length
-            response = self.client.post('/category', headers=dict(
+            response = self.client.post('/api/v1/category', headers=dict(
                 Authorization=access_token
             ), data=invalid_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
@@ -92,7 +92,7 @@ class CategoryTestCase(BaseTestCase):
                 errors['description'][0], 'Description should not be more than 50 characters long.'
             )
             # Ensure that category name is of a valid format
-            response = self.client.post('/category', headers=dict(
+            response = self.client.post('/api/v1/category', headers=dict(
                 Authorization=access_token
             ), data=invalid_category_2, content_type='application/json')
             response_data = json.loads(response.data.decode())
@@ -118,13 +118,13 @@ class CategoryTestCase(BaseTestCase):
             # Retrieve access token
             access_token = json.loads(login_resp.data.decode())['access_token']
             # Create the category
-            response = self.client.post('/category', headers=dict(
+            response = self.client.post('/api/v1/category', headers=dict(
                 Authorization=access_token
             ), data=test_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 201)
             # Attempt a duplication of the same category
-            response = self.client.post('/category', headers=dict(
+            response = self.client.post('/api/v1/category', headers=dict(
                 Authorization=access_token
             ), data=test_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
@@ -137,14 +137,14 @@ class CategoryTestCase(BaseTestCase):
         with self.client:
             # Ensure that resource can not be accessed without an access token
             response = self.client.post(
-                '/category', data=test_category, content_type='application/json'
+                '/api/v1/category', data=test_category, content_type='application/json'
             )
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 401)
             self.assertEqual(response_data['message'], "Please provide an access token!")
             # Ensure that access is only granted when the right access token is provided (on login)
             response = self.client.post(
-                '/category', headers=dict(Authorization="some458273487WRGWU"),
+                '/api/v1/category', headers=dict(Authorization="some458273487WRGWU"),
                 data=test_category, content_type='application/json'
             )
             response_data = json.loads(response.data.decode())
@@ -156,7 +156,7 @@ class CategoryTestCase(BaseTestCase):
 
         with self.client:
             # When user provides no access token
-            response = self.client.get('/category', content_type='application/json')
+            response = self.client.get('/api/v1/category', content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 401)
             self.assertTrue(response_data['message'] == "Please provide an access token!")
@@ -164,7 +164,7 @@ class CategoryTestCase(BaseTestCase):
             access_token = "some_funny_token_/$tring/"
             auth_header = dict(Authorization=access_token)
             response = self.client.get(
-                '/category', headers=auth_header, content_type='application/json'
+                '/api/v1/category', headers=auth_header, content_type='application/json'
             )
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 401)
@@ -183,14 +183,14 @@ class CategoryTestCase(BaseTestCase):
                 Authorization=login_resp_data['access_token']
             )
             response = test_client.get(
-                '/category', headers=auth_header, content_type='application/json'
+                '/api/v1/category', headers=auth_header, content_type='application/json'
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
             self.assertTrue(response_data['message'] == "No categories exist. Please create some.")
             # Create a test category
             category_resp = self.client.post(
-                '/category',
+                '/api/v1/category',
                 headers=auth_header,
                 data=test_category,
                 content_type='application/json'
@@ -198,7 +198,7 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(category_resp.status_code, 201)
             # Ensure category is added
             response = test_client.get(
-                '/category', headers=auth_header, content_type='application/json'
+                '/api/v1/category', headers=auth_header, content_type='application/json'
             )
             self.assert200(response, "Categories not retrieved")
             response_data = json.loads(response.data.decode())
@@ -218,14 +218,14 @@ class CategoryTestCase(BaseTestCase):
             )
             # Add a test categories
             category_resp = self.client.post(
-                '/category',
+                '/api/v1/category',
                 headers=auth_header,
                 data=test_category,
                 content_type='application/json'
             )
             self.assertEqual(category_resp.status_code, 201)
             category_resp = self.client.post(
-                '/category',
+                '/api/v1/category',
                 headers=auth_header,
                 data=test_category_update,
                 content_type='application/json'
@@ -233,7 +233,7 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(category_resp.status_code, 201)
             # Default get without any search or pagination parameters defined
             response = test_client.get(
-                '/category', headers=auth_header, content_type='application/json'
+                '/api/v1/category', headers=auth_header, content_type='application/json'
             )
             self.assert200(response, "Categories not retrieved")
             response_data = json.loads(response.data.decode())
@@ -242,7 +242,9 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(response_data['page_details']['pages'], 1)
             # When only pagination args are defined
             response = test_client.get(
-                '/category?page=1&per_page=1', headers=auth_header, content_type='application/json'
+                '/api/v1/category?page=1&per_page=1',
+                headers=auth_header,
+                content_type='application/json'
             )
             self.assert200(response, "Categories not retrieved")
             response_data = json.loads(response.data.decode())
@@ -266,7 +268,7 @@ class CategoryTestCase(BaseTestCase):
             )
             # Add test category
             cat_create_resp = test_client.post(
-                '/category', headers=auth_header, data=test_category,
+                '/api/v1/category', headers=auth_header, data=test_category,
                 content_type='application/json'
             )
             cat_create_resp_data = json.loads(cat_create_resp.data.decode())
@@ -275,7 +277,7 @@ class CategoryTestCase(BaseTestCase):
 
             # Ensure that the resource is private
             # Attempt Access with no token
-            response = test_client.get('/category/1', content_type='application/json')
+            response = test_client.get('/api/v1/category/1', content_type='application/json')
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['message'], "Please provide an access token!")
@@ -284,7 +286,7 @@ class CategoryTestCase(BaseTestCase):
             x_access_token = "5u32905ugnw9e8ut025u2"
             x_auth_header = dict(Authorization=x_access_token)
             response = test_client.get(
-                '/category/1', headers=x_auth_header, content_type='application/json'
+                '/api/v1/category/1', headers=x_auth_header, content_type='application/json'
             )
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
@@ -292,7 +294,7 @@ class CategoryTestCase(BaseTestCase):
 
             # Ensure single category can be retrieved
             response = test_client.get(
-                '/category/1', headers=auth_header, content_type='application/json'
+                '/api/v1/category/1', headers=auth_header, content_type='application/json'
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
@@ -301,14 +303,14 @@ class CategoryTestCase(BaseTestCase):
 
             # Attempt retrieval of non-existent category
             response = test_client.get(
-                '/category/2', headers=auth_header, content_type='application/json'
+                '/api/v1/category/2', headers=auth_header, content_type='application/json'
             )
             self.assertEqual(response.status_code, 404)
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['message'], "Sorry, category does not exist!")
 
     def test_single_category_update(self):
-        """Ensures that a single category can be retrieved"""
+        """Ensures that a single category can be updated"""
 
         with self.client as test_client:
             # Set up
@@ -322,7 +324,7 @@ class CategoryTestCase(BaseTestCase):
             )
             # Add test category
             cat_create_resp = test_client.post(
-                '/category', headers=auth_header, data=test_category,
+                '/api/v1/category', headers=auth_header, data=test_category,
                 content_type='application/json'
             )
             cat_create_resp_data = json.loads(cat_create_resp.data.decode())
@@ -332,7 +334,7 @@ class CategoryTestCase(BaseTestCase):
             # Ensure that the resource is private
             # Attempt Access with no token
             response = test_client.put(
-                '/category/1', data=test_category_update,
+                '/api/v1/category/1', data=test_category_update,
                 content_type='application/json'
             )
             self.assertEqual(response.status_code, 401)
@@ -343,26 +345,47 @@ class CategoryTestCase(BaseTestCase):
             x_access_token = "5u32905ugnw9e8ut025u2"
             x_auth_header = dict(Authorization=x_access_token)
             response = test_client.put(
-                '/category/1', headers=x_auth_header,
+                '/api/v1/category/1', headers=x_auth_header,
                 data=test_category_update, content_type='application/json'
             )
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['message'], "Invalid token. Login to use this resource!")
 
-            # Ensure single category can be updated
+            # Ensure single category can be updated with a complete set of
+            # new details
             response = test_client.put(
-                '/category/1', headers=auth_header,
+                '/api/v1/category/1', headers=auth_header,
                 data=test_category_update, content_type='application/json'
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
-            self.assertTrue(len(response_data['categories']) == 1)
-            self.assertEqual(response_data['categories'][0]['category_name'], "Pies")
+            self.assertEqual(
+                response_data['message'],
+                "Category '{}' was successfully updated to '{}'.".format(
+                    _clean_name(json.loads(test_category)['category_name']),
+                    _clean_name(json.loads(test_category_update)['category_name'])
+                )
+            )
+
+            # Ensure single category can be updated with a new description only
+            json.loads(test_category_update)['description'] = "Some new description"
+            response = test_client.put(
+                '/api/v1/category/1', headers=auth_header,
+                data=test_category_update, content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 200)
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(
+                response_data['message'],
+                "Category '{}' was successfully updated.".format(
+                    _clean_name(json.loads(test_category_update)['category_name'])
+                )
+            )
 
             # Attempt update of non-existent category
             response = test_client.put(
-                '/category/2', headers=auth_header,
+                '/api/v1/category/2', headers=auth_header,
                 data=test_category_update, content_type='application/json'
             )
             self.assertEqual(response.status_code, 404)
@@ -384,7 +407,7 @@ class CategoryTestCase(BaseTestCase):
             )
             # Add test category
             cat_create_resp = test_client.post(
-                '/category', headers=auth_header, data=test_category,
+                '/api/v1/category', headers=auth_header, data=test_category,
                 content_type='application/json'
             )
             cat_create_resp_data = json.loads(cat_create_resp.data.decode())
@@ -394,7 +417,7 @@ class CategoryTestCase(BaseTestCase):
             # Ensure that the resource is private
             # Attempt Access with no token
             response = test_client.delete(
-                '/category/1', content_type='application/json'
+                '/api/v1/category/1', content_type='application/json'
             )
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
@@ -404,7 +427,7 @@ class CategoryTestCase(BaseTestCase):
             x_access_token = "5u32905ugnw9e8ut025u2"
             x_auth_header = dict(Authorization=x_access_token)
             response = test_client.delete(
-                '/category/1', headers=x_auth_header, content_type='application/json'
+                '/api/v1/category/1', headers=x_auth_header, content_type='application/json'
             )
             self.assertEqual(response.status_code, 401)
             response_data = json.loads(response.data.decode())
@@ -412,7 +435,7 @@ class CategoryTestCase(BaseTestCase):
 
             # Ensure single category can be deleted
             response = test_client.delete(
-                '/category/1', headers=auth_header, content_type='application/json'
+                '/api/v1/category/1', headers=auth_header, content_type='application/json'
             )
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
@@ -425,7 +448,7 @@ class CategoryTestCase(BaseTestCase):
 
             # Attempt delete of non-existent category
             response = test_client.delete(
-                '/category/2', headers=auth_header, content_type='application/json'
+                '/api/v1/category/2', headers=auth_header, content_type='application/json'
             )
             self.assertEqual(response.status_code, 404)
             response_data = json.loads(response.data.decode())

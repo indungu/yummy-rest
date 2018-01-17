@@ -16,5 +16,7 @@ authorization = {
 API = Api(
     version='1.0', title="Yummy REST",
     description="REST API implementation of the Yummy Recipes using Flask and PostgreSQL",
-    authorizations=authorization
+    authorizations=authorization,
+    prefix='/api/v1',
+    doc='/api/v1/docs'
 )

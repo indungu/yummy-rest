@@ -11,7 +11,9 @@ def validate_email(data):
     Ensures that the email provided is of the acceptable
     format expressed below.
     """
-
+    # check email is not empty nor too short
+    if not data or len(data) < 6:
+        raise ValidationError('Email cannot be empty or less than 6 characters long.')
     # set the regex to validate against
     email_re = re.compile(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z-.]+$)")
 
@@ -53,6 +55,12 @@ def validate_password(data):
     # minimum length
     if not len(data) >= 8:
         raise ValidationError('Password should be 8 characters or longer.')
+    elif not re.search('[a-z]+', data):
+        raise ValidationError('Password should have at least one lowercase letter.')
+    elif not re.search('[A-Z]+', data):
+        raise ValidationError('Password should have at least one uppercase letter.')
+    elif not re.search('\W+', data):
+        raise ValidationError('Password should have at least one special character.')
     else:
         password_re = re.compile(r"^\S+$")
         valid = re.fullmatch(password_re, data)
