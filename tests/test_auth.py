@@ -132,12 +132,12 @@ class AuthNSTestCase(BaseTestCase):
         with self.client:
             # Ensure user can't register with a password that is less than
             # 8 characters long
-            new_user_details = dict(
+            user_details = dict(
                 email="some@person.com",
                 username="some_user",
                 password="pass"
             )
-            response = register_user(self, user_data=new_user_details)
+            response = register_user(self, user_data=user_details)
             data = json.loads(response.data.decode())
             errors = data['errors']
             self.assertTrue(
