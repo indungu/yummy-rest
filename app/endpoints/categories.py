@@ -1,10 +1,9 @@
 """The categories endpoints"""
-import sys
 from flask import request, jsonify, make_response
 from flask_restplus import Resource
 from webargs.flaskparser import parser
 
-from app.helpers import authorization_required, _pagination
+from app.helpers import authorization_required, _pagination, _clean_name
 from app.helpers.validators import CategorySchema
 from app.models import db, Category
 from app.parsers import SEARCH_PAGE_ARGS, _make_args_parser
@@ -40,21 +39,17 @@ class CategoryHandler(Resource):
 
         if current_user:
             # get request data
-            data = request.get_json()
+            request_payload = request.get_json()
 
             # initialize validation schema
             category_schema = CategorySchema()
 
-            data, errors = category_schema.load(data)
+            request_payload, errors = category_schema.load(request_payload)
 
             if errors:
-                reponse_obj = dict(
-                    message='You entered some invalid details.',
-                    errors=errors
-                )
-                return make_response(jsonify(reponse_obj), 422)
+                return make_response(jsonify(dict(errors=errors)), 422)
 
-            category_name = data['category_name'].lower()
+            category_name = _clean_name(request_payload['category_name'])
 
             # check if category exists
             existing_category = current_user.categories.filter_by(
@@ -63,45 +58,41 @@ class CategoryHandler(Resource):
             if not existing_category:
                 name = category_name
                 owner = current_user.id
-                description = data['description']
+                description = request_payload['description']
 
                 # Add new category
                 try:
                     new_category = Category(name, owner, description)
                     db.session.add(new_category)
                     db.session.commit()
-                    resp_obj = {
+                    response_payload = {
                         "categories": [dict(
                             category_id=new_category.id,
                             category_name=new_category.name,
                             description=new_category.description,
-                            owner=owner,
+                            owner_id=owner,
                             date_created=new_category.created_on,
                             date_updated=new_category.updated_on
-                        )],
-                        "status": "Success!"
+                        )]
                     }
-                    resp_obj = jsonify(resp_obj)
-                    return make_response(resp_obj, 201)
+                    response_payload = jsonify(response_payload)
+                    return make_response(response_payload, 201)
                 except:
-                    resp_obj = dict(
-                        message="Some error occured!",
-                        status="Error"
+                    response_payload = dict(
+                        message="Some error occured. Please try again later."
                     )
-                    resp_obj = jsonify(resp_obj)
-                    return make_response(resp_obj, 501)
-            resp_obj = dict(
-                message="The category already exists!",
-                status="Fail!"
+                    response_payload = jsonify(response_payload)
+                    return make_response(response_payload, 501)
+            response_payload = dict(
+                message="The category already exists!"
             )
-            resp_obj = jsonify(resp_obj)
-            return make_response(resp_obj, 400)
-        resp_obj = dict(
-            status="Fail!",
+            response_payload = jsonify(response_payload)
+            return make_response(response_payload, 400)
+        response_payload = dict(
             message='Login to use this resource!'
         )
-        resp_obj = jsonify(resp_obj)
-        return make_response(resp_obj, 401)
+        response_payload = jsonify(response_payload)
+        return make_response(response_payload, 401)
 
     @categories_ns.expect(args_parser)
     @authorization_required
@@ -109,19 +100,20 @@ class CategoryHandler(Resource):
         """Returns a list of user's recipe categories"""
 
         if current_user:
+            if not current_user.categories.all():
+                return make_response( \
+            jsonify({'message': 'No categories exist. Please create some.'}))
             # parse args if provided
             args = parser.parse(SEARCH_PAGE_ARGS, request)
-            if args:
+            if 'q' in args:
                 try:
                     all_categories = current_user.categories.filter(
                         Category.name.ilike("%" + args['q'] + "%")
-                    ).paginate(page=args['page'], per_page=args['per_page'])
+                    ).paginate(page=args['page'], per_page=args['per_page'], error_out=False)
                 except KeyError:
-                    try:
-                        all_categories = current_user.categories. \
-                        paginate(page=args['page'], per_page=args['per_page'])
-                    except KeyError:
-                        all_categories = current_user.categories.paginate(error_out=False)
+                    all_categories = current_user.categories.filter(
+                        Category.name.ilike("%" + args['q'] + "%")
+                    ).paginate(page=1, per_page=5)
             else:
                 all_categories = current_user.categories.paginate(error_out=False)
             pagination_details = _pagination(all_categories)
@@ -135,18 +127,21 @@ class CategoryHandler(Resource):
                     date_updated=cat.updated_on
                 )
                 categories.append(catg)
-            resp_obj = {
-                "categories": categories,
-                "message": "Success!",
-                "page_details": pagination_details
-            }
-            return make_response(jsonify(resp_obj), 200)
-        resp_obj = dict(
-            status="Fail!",
+            if categories:
+                response_payload = {
+                    "categories": categories,
+                    "page_details": pagination_details
+                }
+            else:
+                response_payload = {
+                    "message": "Page does not exist."
+                }
+            return make_response(jsonify(response_payload), 200)
+        response_payload = dict(
             message='Login to use this resource!'
         )
-        resp_obj = jsonify(resp_obj)
-        return make_response(resp_obj, 401)
+        response_payload = jsonify(response_payload)
+        return make_response(response_payload, 401)
 
 @categories_ns.route('/<int:id>')
 class SingleCategoryResource(Resource):
@@ -163,36 +158,32 @@ class SingleCategoryResource(Resource):
         :param: id (int)
         """
         if not current_user:
-            print(current_user, file=sys.stdout)
-            resp_obj = dict(
-                status="Fail!",
+            response_payload = dict(
                 message='Invalid token. Login to use this resource!'
             )
-            resp_obj = jsonify(resp_obj)
-            return make_response(resp_obj, 401)
+            response_payload = jsonify(response_payload)
+            return make_response(response_payload, 401)
 
         # retrieve specified category
-        specified_category = Category.query.filter_by(id=id).first()
+        specified_category = current_user.categories.filter_by(id=id).first()
 
         if specified_category:
-            resp_obj = {
+            response_payload = {
                 "categories": [dict(
                     category_id=specified_category.id,
                     category_name=specified_category.name,
-                    category_description=specified_category.description,
+                    description=specified_category.description,
                     date_created=specified_category.created_on,
                     date_updated=specified_category.updated_on
-                )],
-                "status": "Success!"
+                )]
             }
-            resp_obj = jsonify(resp_obj)
-            return make_response(resp_obj, 200)
-        resp_obj = dict(
-            message="Sorry, category does not exist!",
-            status="Fail!"
+            response_payload = jsonify(response_payload)
+            return make_response(response_payload, 200)
+        response_payload = dict(
+            message="Sorry, category does not exist!"
         )
-        resp_obj = jsonify(resp_obj)
-        return make_response(resp_obj, 404)
+        response_payload = jsonify(response_payload)
+        return make_response(response_payload, 404)
 
     @authorization_required
     @API.expect(category)
@@ -203,44 +194,61 @@ class SingleCategoryResource(Resource):
         :param: id (int)
         """
         if not current_user:
-            print(current_user, file=sys.stdout)
-            resp_obj = dict(
-                status="Fail!",
+            response_payload = dict(
                 message='Invalid token. Login to use this resource!'
             )
-            resp_obj = jsonify(resp_obj)
-            return make_response(resp_obj, 401)
+            response_payload = jsonify(response_payload)
+            return make_response(response_payload, 401)
 
         # retrieve specified category
         specified_category = current_user.categories.filter_by(id=id).first()
 
         if specified_category:
             # Get request data
-            data = request.get_json()
+            request_payload = request.get_json()
 
-            # Update category data
-            specified_category.name = data['category_name']
-            specified_category.description = data['description']
-            db.session.commit()
+            # format new name
+            new_category_name = _clean_name(request_payload['category_name'])
 
-            resp_obj = {
-                "categories": [dict(
-                    category_id=specified_category.id,
-                    category_name=specified_category.name,
-                    category_description=specified_category.description,
-                    date_created=specified_category.created_on,
-                    date_updated=specified_category.updated_on
-                )],
-                "status": "Success!"
-            }
-            resp_obj = jsonify(resp_obj)
-            return make_response(resp_obj, 200)
-        resp_obj = dict(
-            message="Sorry, category does not exist!",
-            status="Fail!"
+            # Ensure the category name does not match that any of the user's
+            # existing category apart from the one they are editing
+            existing_category = current_user.categories.filter(
+                Category.name == _clean_name(request_payload['category_name']),
+                Category.id != specified_category.id
+            ).first()
+
+            # return appropriate response
+            if not existing_category:
+                if new_category_name != specified_category.name:
+                    old_category_name = specified_category.name
+                    specified_category.name = new_category_name
+                    specified_category.description = request_payload['description']
+                    db.session.commit()
+                    response_payload = dict(
+                        message="Category '{}' was successfully updated to '{}'.".format(
+                            old_category_name, specified_category.name
+                        )
+                    )
+                else:
+                    specified_category.description = request_payload['description']
+                    db.session.commit()
+                    response_payload = dict(
+                        message="Category '{}' was successfully updated.".format(
+                            specified_category.name
+                        )
+                    )
+                response_payload = jsonify(response_payload)
+                return make_response(response_payload, 200)
+            response_payload = dict(
+                message="Category already exists, please use a different name."
+            )
+            return make_response(jsonify(response_payload), 401)
+
+        response_payload = dict(
+            message="Sorry, category does not exist!"
         )
-        resp_obj = jsonify(resp_obj)
-        return make_response(resp_obj, 404)
+        response_payload = jsonify(response_payload)
+        return make_response(response_payload, 404)
 
     @authorization_required
     def delete(current_user, self, id):
@@ -250,29 +258,27 @@ class SingleCategoryResource(Resource):
         :param: id (int)
         """
         if not current_user:
-            print(current_user, file=sys.stdout)
-            resp_obj = dict(
-                status="Fail!",
+            response_payload = dict(
                 message='Invalid token. Login to use this resource!'
             )
-            resp_obj = jsonify(resp_obj)
-            return make_response(resp_obj, 401)
+            response_payload = jsonify(response_payload)
+            return make_response(response_payload, 401)
 
         # retrieve specified category
         specified_category = current_user.categories.filter_by(id=id).first()
 
         if specified_category:
+            category_name = specified_category.name
             db.session.delete(specified_category)
             db.session.commit()
 
-            resp_obj = {
-                "status": "Success!"
+            response_payload = {
+                "message": "Category '{}' was deleted successfully.".format(category_name)
             }
-            resp_obj = jsonify(resp_obj)
-            return make_response(resp_obj, 200)
-        resp_obj = dict(
-            message="Sorry, category does not exist!",
-            status="Fail!"
+            response_payload = jsonify(response_payload)
+            return make_response(response_payload, 200)
+        response_payload = dict(
+            message="Sorry, category does not exist!"
         )
-        resp_obj = jsonify(resp_obj)
-        return make_response(resp_obj, 404)
+        response_payload = jsonify(response_payload)
+        return make_response(response_payload, 404)

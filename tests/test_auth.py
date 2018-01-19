@@ -5,8 +5,8 @@ from instance.config import app_config
 from app import APP
 from app.models import db, User, BlacklistToken
 
-from .helpers import register_user, user_details_inv_email,\
-                     user_details_inv_username, user_details_inv_username_2
+from .helpers import register_user, login_user, user_details_wrong_email, user_details,\
+                     user_details_bad_username, user_details_bad_username_2
 
 # pylint: disable=C0103
 # pylint: disable=E1101
@@ -48,7 +48,7 @@ class AuthNSTestCase(BaseTestCase):
         user = User(
             email='isaac@yum.my',
             username="isaac",
-            password='some_pass'
+            password='some_P@ss'
         )
         db.session.add(user)
         db.session.commit()
@@ -61,13 +61,24 @@ class AuthNSTestCase(BaseTestCase):
             self.assertEqual(response.status_code, 400)
 
     def test_registration_with_invalid_email(self):
-        """ Test for user registration """
+        """ Test for user registration with invalid email """
+        # when the email is of invalid format
         with self.client:
-            response = register_user(self, user_data=user_details_inv_email)
+            response = register_user(self, user_data=user_details_wrong_email)
             data = json.loads(response.data.decode())
             self.assertTrue(
-                data['message'] == 'You provided some invalid details.'
+                'email' in data['errors']
             )
+            self.assertTrue(response.content_type == 'application/json')
+            self.assertEqual(response.status_code, 422)
+
+    def test_registration_with_invalid_length_email(self):
+        """ Test for user registration with invalid length email """
+        # when the email is of invalid length
+        with self.client:
+            user_details_wrong_email["email"] = ""
+            response = register_user(self, user_data=user_details_wrong_email)
+            data = json.loads(response.data.decode())
             self.assertTrue(
                 'email' in data['errors']
             )
@@ -75,14 +86,11 @@ class AuthNSTestCase(BaseTestCase):
             self.assertEqual(response.status_code, 422)
 
     def test_registration_with_invalid_username(self):
-        """ Test for user registration """
+        """ Test for user registration with invalid username"""
         with self.client:
             # When the username has special characters
-            response = register_user(self, user_data=user_details_inv_username)
+            response = register_user(self, user_data=user_details_bad_username)
             data = json.loads(response.data.decode())
-            self.assertTrue(
-                data['message'] == 'You provided some invalid details.'
-            )
             errors = data['errors']
             self.assertTrue(
                 'username' in errors
@@ -94,11 +102,8 @@ class AuthNSTestCase(BaseTestCase):
             self.assertEqual(response.status_code, 422)
 
             # When the username is of invalid length
-            response = register_user(self, user_data=user_details_inv_username_2)
+            response = register_user(self, user_data=user_details_bad_username_2)
             data = json.loads(response.data.decode())
-            self.assertTrue(
-                data['message'] == 'You provided some invalid details.'
-            )
             errors = data['errors']
             self.assertTrue(
                 'username' in errors
@@ -108,6 +113,19 @@ class AuthNSTestCase(BaseTestCase):
             )
             self.assertTrue(response.content_type == 'application/json')
             self.assertEqual(response.status_code, 422)
+
+            # When the username is of an existing user
+            register_user(self)
+            user_details_bad_username_2["username"] = "isaac"
+            user_details_bad_username_2["email"] = "esar@yummy.io"
+            print(user_details_bad_username_2)
+            response = register_user(self, user_data=user_details_bad_username_2)
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response.status_code, 401)
+            self.assertEqual(
+                response_data["message"],
+                "Username already taken, please choose another."
+            )
 
     def test_registration_with_invalid_passowrd(self):
         """ Test for user registration with an invalid password """
@@ -121,41 +139,72 @@ class AuthNSTestCase(BaseTestCase):
             )
             response = register_user(self, user_data=user_details)
             data = json.loads(response.data.decode())
-            self.assertTrue(
-                data['message'] == 'You provided some invalid details.'
-            )
             errors = data['errors']
             self.assertTrue(
                 'password' in errors
             )
-            self.assertEqual(
-                errors['password'][0], 'Password should be 8 characters or longer.'
+            self.assertIn(
+                'Password should be 8 characters or longer.', errors['password']
             )
-            self.assertTrue(response.content_type == 'application/json')
             self.assertEqual(response.status_code, 422)
 
-            # When the password has space character
-            user_details['password'] = "   some_pass"
+            # When the password has space character(s)
+            user_details['password'] = "   some_P@ss"
             response = register_user(self, user_data=user_details)
             data = json.loads(response.data.decode())
-            self.assertTrue(
-                data['message'] == 'You provided some invalid details.'
-            )
             errors = data['errors']
             self.assertTrue(
                 'password' in errors
             )
-            self.assertEqual(
-                errors['password'][0], 'Password should not have spaces.'
+            self.assertIn(
+                'Password should not have spaces.', errors['password']
             )
-            self.assertTrue(response.content_type == 'application/json')
+            self.assertEqual(response.status_code, 422)
+
+            # When the password has no special character
+            user_details['password'] = "somePass"
+            response = register_user(self, user_data=user_details)
+            data = json.loads(response.data.decode())
+            errors = data['errors']
+            self.assertTrue(
+                'password' in errors
+            )
+            self.assertIn(
+                'Password should have at least one special character.', errors['password']
+            )
+            self.assertEqual(response.status_code, 422)
+
+            # When the password has no uppercase letter
+            user_details['password'] = "somepass"
+            response = register_user(self, user_data=user_details)
+            data = json.loads(response.data.decode())
+            errors = data['errors']
+            self.assertTrue(
+                'password' in errors
+            )
+            self.assertIn(
+                'Password should have at least one uppercase letter.', errors['password']
+            )
+            self.assertEqual(response.status_code, 422)
+
+            # When the password has no lowercase letter (is just numbers)
+            user_details['password'] = "123450976"
+            response = register_user(self, user_data=user_details)
+            data = json.loads(response.data.decode())
+            errors = data['errors']
+            self.assertTrue(
+                'password' in errors
+            )
+            self.assertIn(
+                'Password should have at least one lowercase letter.', errors['password']
+            )
             self.assertEqual(response.status_code, 422)
 
     def test_login_without_credentials(self):
         """Test login resource without any credentials supplied"""
         with self.client:
             response = self.client.post(
-                '/auth/login',
+                '/api/v1/auth/login',
                 data=json.dumps(dict()),
                 content_type="application/json"
             )
@@ -175,14 +224,7 @@ class AuthNSTestCase(BaseTestCase):
             self.assertTrue(register_resp.content_type == 'application/json')
             self.assertEqual(register_resp.status_code, 201)
             # registered user login
-            response = self.client.post(
-                '/auth/login',
-                data=json.dumps(dict(
-                    email='isaac@yum.my',
-                    password='1234509876'
-                )),
-                content_type='application/json'
-            )
+            response = login_user(self)
             data = json.loads(response.data.decode())
             self.assertTrue(data['message'] == 'Logged in successfully.')
             self.assertTrue(data['access_token'])
@@ -193,7 +235,7 @@ class AuthNSTestCase(BaseTestCase):
         """ Test for login of non-registered user """
         with self.client:
             response = self.client.post(
-                '/auth/login',
+                '/api/v1/auth/login',
                 data=json.dumps(dict(
                     email='joe@yum.my',
                     password='1234509876'
@@ -218,7 +260,7 @@ class AuthNSTestCase(BaseTestCase):
             self.assertEqual(register_resp.status_code, 201)
             # registered user login with wrong password
             response = self.client.post(
-                '/auth/login',
+                '/api/v1/auth/login',
                 data=json.dumps(dict(
                     email='isaac@yum.my',
                     password='654321'
@@ -241,14 +283,7 @@ class AuthNSTestCase(BaseTestCase):
             self.assertTrue(register_resp.content_type == 'application/json')
             self.assertEqual(register_resp.status_code, 201)
             # user login
-            login_resp = self.client.post(
-                '/auth/login',
-                data=json.dumps(dict(
-                    email='isaac@yum.my',
-                    password='1234509876'
-                )),
-                content_type='application/json'
-            )
+            login_resp = login_user(self)
             data_login = json.loads(login_resp.data.decode())
             self.assertTrue(data_login['message'] == 'Logged in successfully.')
             self.assertTrue(data_login['access_token'])
@@ -256,7 +291,7 @@ class AuthNSTestCase(BaseTestCase):
             self.assertEqual(login_resp.status_code, 200)
             # valid token logout
             response = self.client.post(
-                '/auth/logout',
+                '/api/v1/auth/logout',
                 headers=dict(
                     Authorization=json.loads(
                         login_resp.data.decode()
@@ -279,14 +314,7 @@ class AuthNSTestCase(BaseTestCase):
             self.assertTrue(register_resp.content_type == 'application/json')
             self.assertEqual(register_resp.status_code, 201)
             # user login
-            login_resp = self.client.post(
-                '/auth/login',
-                data=json.dumps(dict(
-                    email='isaac@yum.my',
-                    password='1234509876'
-                )),
-                content_type='application/json'
-            )
+            login_resp = login_user(self)
             data_login = json.loads(login_resp.data.decode())
             self.assertTrue(data_login['message'] == 'Logged in successfully.')
             self.assertTrue(data_login['access_token'])
@@ -299,7 +327,7 @@ class AuthNSTestCase(BaseTestCase):
             db.session.commit()
             # blacklisted valid token logout
             response = self.client.post(
-                '/auth/logout',
+                '/api/v1/auth/logout',
                 headers=dict(
                     Authorization=json.loads(
                         login_resp.data.decode()
@@ -320,14 +348,7 @@ class AuthNSTestCase(BaseTestCase):
             # user registration
             register_user(self)
             # login user
-            self.client.post(
-                '/auth/login',
-                data=json.dumps(dict(
-                    email='isaac@yum.my',
-                    password='1234509876'
-                )),
-                content_type='application/json'
-            )
+            login_user(self)
             # User public ID
             user = User.query.filter_by(email="isaac@yum.my").first()
             public_id = user.public_id
@@ -335,10 +356,10 @@ class AuthNSTestCase(BaseTestCase):
             # ensure that user can reset thier password granted
             # they provide the correct public id and current_password
             response = self.client.post(
-                '/auth/reset-password',
+                '/api/v1/auth/reset-password',
                 data=json.dumps(dict(
                     public_id=public_id,
-                    current_password='1234509876',
+                    current_password=user_details["password"],
                     new_password='12345678',
                 )),
                 content_type='application/json'
@@ -351,10 +372,10 @@ class AuthNSTestCase(BaseTestCase):
             # ensure that user cannot reset thier password if/when
             # they provide the incorrect current_password
             response = self.client.post(
-                '/auth/reset-password',
+                '/api/v1/auth/reset-password',
                 data=json.dumps(dict(
                     public_id=public_id,
-                    current_password='1234509876',
+                    current_password=user_details["password"],
                     new_password='12345678',
                 )),
                 content_type='application/json'
@@ -367,10 +388,10 @@ class AuthNSTestCase(BaseTestCase):
             # ensure that user cannot reset thier password if/when
             # they provide the incorrect public_id
             response = self.client.post(
-                '/auth/reset-password',
+                '/api/v1/auth/reset-password',
                 data=json.dumps(dict(
                     public_id="public_id",
-                    current_password='1234509876',
+                    current_password=user_details["password"],
                     new_password='12345678',
                 )),
                 content_type='application/json'

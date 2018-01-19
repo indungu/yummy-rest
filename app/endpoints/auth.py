@@ -41,8 +41,7 @@ class RegisterHandler(Resource):
 
         if errors:
             response_obj = dict(
-                errors=errors,
-                message='You provided some invalid details.'
+                errors=errors
             )
             return make_response(jsonify(response_obj), 422)
 
@@ -58,8 +57,8 @@ class RegisterHandler(Resource):
                 db.session.commit()
                 return make_response(jsonify({'message': 'Registered successfully!'}), 201)
             except:
-                response = {"message": "Some error occured. Please retry."}
-                return make_response(jsonify(response), 501)
+                response = {"message": "Username already taken, please choose another."}
+                return make_response(jsonify(response), 401)
         else:
             response = jsonify({'message': 'User already exists. Please Log in instead.'})
             return make_response(response, 400)

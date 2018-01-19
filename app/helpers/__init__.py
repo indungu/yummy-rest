@@ -49,11 +49,10 @@ def authorization_required(func):
             token = request.headers['Authorization']
 
         if not token:
-            response_obj = {
-                "message": "Please provide an access token!",
-                "status": "Fail!"
+            response_payload = {
+                "message": "Please provide an access token!"
             }
-            return make_response(jsonify(response_obj), 401)
+            return make_response(jsonify(response_payload), 401)
 
         result = decode_access_token(token)
 
