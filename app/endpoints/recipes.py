@@ -6,9 +6,11 @@ from webargs.flaskparser import parser
 from app.models import db, Recipe
 from app.serializers import recipe
 from app.restplus import API
-from app.helpers import authorization_required, _clean_name, _pagination
+from app.helpers import (
+    authorization_required, _clean_name, _pagination, is_unauthorized
+)
 from app.helpers.validators import RecipeSchema
-from app.parsers import SEARCH_PAGE_ARGS, _make_args_parser
+from app.parsers import SEARCH_PAGE_ARGS, make_args_parser
 
 # Linting exceptions
 
@@ -22,7 +24,7 @@ recipes_ns = API.namespace(
     path='/category/<int:category_id>/recipes'
 )
 
-args_parser = _make_args_parser(recipes_ns)
+args_parser = make_args_parser(recipes_ns)
 @recipes_ns.route('')
 class GeneralRecipesHandler(Resource):
     """
@@ -41,11 +43,7 @@ class GeneralRecipesHandler(Resource):
         """
 
         if not current_user:
-            response_payload = dict(
-                message='Invalid token. Login to use this resource!'
-            )
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 401)
+            return is_unauthorized()
 
         request_payload = request.get_json()
         request_payload['recipe_name'] = _clean_name(request_payload['recipe_name'])
@@ -111,19 +109,13 @@ class GeneralRecipesHandler(Resource):
         """
         Retrives a list of the recipes for the category
 
-        :param int category_id: The id of the category whose recipes to be displayed
-
-        :return str status: The status of the request (Success, Fail)
-
+        :param int category_id: The id of the category whose recipes to be displayed\n
+        :return str status: The status of the request (Success, Fail)\n
         :return list recipes: The recipes in the category
         """
 
         if not current_user:
-            response_payload = dict(
-                message='Invalid token. Login to use this resource!'
-            )
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 401)
+            return is_unauthorized()
 
         category = current_user.categories.filter_by(id=category_id).first()
         if category:
@@ -141,11 +133,13 @@ class GeneralRecipesHandler(Resource):
             if 'q' in args:
                 try:
                     recipes = current_user.recipes.filter(
-                        Recipe.name.ilike("%" + args['q'] + "%")
+                        Recipe.name.ilike("%" + args['q'] + "%"),
+                        Recipe.category_id == category.id
                     ).paginate(page=args['page'], per_page=args['per_page'], error_out=False)
                 except KeyError:
                     recipes = current_user.recipes.filter(
-                        Recipe.name.ilike("%" + args['q'] + "%")
+                        Recipe.name.ilike("%" + args['q'] + "%"),
+                        Recipe.category_id == category.id
                     ).paginate(page=1, per_page=5)
             else:
                 recipes = category.recipes.paginate(error_out=False)
@@ -197,11 +191,7 @@ class SingleRecipeHandler(Resource):
         """
 
         if not current_user:
-            response_payload = dict(
-                message='Invalid token. Login to use this resource!'
-            )
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 401)
+            return is_unauthorized()
 
         category = current_user.categories.filter_by(id=category_id).first()
         if category:
@@ -246,13 +236,8 @@ class SingleRecipeHandler(Resource):
         :param int recipe_id: The integer Id of the recipe to be retrieved\n
         :returns json response: An appropriate response depending on the request
         """
-
         if not current_user:
-            response_payload = dict(
-                message='Invalid token. Login to use this resource!'
-            )
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 401)
+            return is_unauthorized()
 
         category = current_user.categories.filter_by(id=category_id).first()
         if category:
@@ -321,18 +306,12 @@ class SingleRecipeHandler(Resource):
         :param int recipe_id: The integer Id of the recipe to be retrieved\n
         :returns json response: An appropriate response depending on the request
         """
-
         if not current_user:
-            response_payload = dict(
-                message='Invalid token. Login to use this resource!'
-            )
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 401)
+            return is_unauthorized()
 
         category = current_user.categories.filter_by(id=category_id).first()
         if category:
             selected_recipe = category.recipes.filter_by(id=recipe_id).first()
-
             # When the recipe requested does not exist
             if not selected_recipe:
                 response_payload = dict(
@@ -340,9 +319,7 @@ class SingleRecipeHandler(Resource):
                 )
                 response_payload = jsonify(response_payload)
                 return make_response(response_payload, 404)
-
             name = selected_recipe.name
-
             # Delete the selected recipe
             db.session.delete(selected_recipe)
             db.session.commit()
