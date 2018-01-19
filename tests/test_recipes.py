@@ -2,9 +2,10 @@
 This is the unit test suite for the recipes endpoint
 """
 import json
-
-from .helpers import register_user, login_user, test_category, test_recipe, test_recipe_update
+from app.helpers import _clean_name
 from .test_auth import BaseTestCase
+from .helpers import register_user, login_user, test_category, test_recipe, test_recipe_update,\
+                     invalid_recipe, invalid_recipe_2
 
 # Linting exceptions
 # pylint: disable=C0103
@@ -29,7 +30,7 @@ class RecipesTestCase(BaseTestCase):
                 Authorization=login_resp_data['access_token']
             )
             category_create_resp = test_client.post(
-                '/category', headers=self.auth_header, data=test_category,
+                '/api/v1/category', headers=self.auth_header, data=test_category,
                 content_type='application/json'
             )
             self.assertEqual(category_create_resp.status_code, 201)
@@ -41,21 +42,20 @@ class RecipesTestCase(BaseTestCase):
         with self.client as test_client:
             # Test the resouce with No authorization
             response = test_client.post(
-                '/category/1/recipes', data=test_recipe,
+                '/api/v1/category/1/recipes', data=test_recipe,
                 content_type='application/json'
             )
             self.assert401(response, "Wrong reponse code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], "Please provide an access token!")
             # test the resource with invalid authorization
             response = test_client.post(
-                '/category/1/recipes', headers=dict(Authorization="Some98247982hnidutie3rojgnadf"),
+                '/api/v1/category/1/recipes',
+                headers=dict(Authorization="Some98247982hnidutie3rojgnadf"),
                 data=test_recipe, content_type='application/json'
             )
             self.assert401(response, "Wrong reponse code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Invalid token. Login to use this resource!')
 
     def test_recipe_creation_invalid_category(self):
@@ -68,13 +68,12 @@ class RecipesTestCase(BaseTestCase):
         with self.client as test_client:
             # when a wrong or invalid category_id is provided
             response = test_client.post(
-                'category/2/recipes', headers=self.auth_header,
+                '/api/v1/category/2/recipes', headers=self.auth_header,
                 data=test_recipe, content_type='application/json'
             )
             self.assert400(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['message'], 'Invalid category!')
-            self.assertEqual(response_data['status'], 'Fail!')
 
     def test_recipe_creation_valid_category(self):
         """
@@ -85,13 +84,55 @@ class RecipesTestCase(BaseTestCase):
         with self.client as test_client:
 
             response = test_client.post(
-                '/category/1/recipes', headers=self.auth_header,
+                '/api/v1/category/1/recipes', headers=self.auth_header,
                 data=test_recipe, content_type='application/json'
             )
             self.assertEqual(response.status_code, 201)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Success!')
             self.assertEqual(len(response_data['recipes']), 1)
+
+    def test_recipe_creation_valid_category_invalid_name(self):
+        """
+        Ensures a user cannot create a recipe in a specified category
+        with invalid recipe details
+        """
+
+        self.set_up()
+        with self.client as test_client:
+
+            # When the recipe name is
+            # of invalid length
+            response = test_client.post(
+                '/api/v1/category/1/recipes', headers=self.auth_header,
+                data=invalid_recipe, content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 422)
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['message'], 'You provided some invalid details.')
+            errors = response_data['errors']
+            self.assertTrue(
+                'recipe_name' in errors
+            )
+            self.assertEqual(
+                errors['recipe_name'][0], "Name too short. Should be 3 or more characters."
+            )
+            # When the recipe name is
+            # of invalid format
+            response = test_client.post(
+                '/api/v1/category/1/recipes', headers=self.auth_header,
+                data=invalid_recipe_2, content_type='application/json'
+            )
+            self.assertEqual(response.status_code, 422)
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(response_data['message'], 'You provided some invalid details.')
+            errors = response_data['errors']
+            self.assertTrue(
+                'recipe_name' in errors
+            )
+            self.assertEqual(
+                errors['recipe_name'][0],
+                "Name should only contain letters, an underscore and/or a period."
+            )
 
     def test_recipe_duplication(self):
         """
@@ -102,21 +143,19 @@ class RecipesTestCase(BaseTestCase):
         with self.client as test_client:
             # add recipe
             response = test_client.post(
-                '/category/1/recipes', headers=self.auth_header,
+                '/api/v1/category/1/recipes', headers=self.auth_header,
                 data=test_recipe, content_type='application/json'
             )
             self.assertEqual(response.status_code, 201)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Success!')
             self.assertEqual(len(response_data['recipes']), 1)
             # Duplicate recipe
             response = test_client.post(
-                '/category/1/recipes', headers=self.auth_header,
+                '/api/v1/category/1/recipes', headers=self.auth_header,
                 data=test_recipe, content_type='application/json'
             )
             self.assertEqual(response.status_code, 400)
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Recipe already exists!')
 
     def test_recipes_view_resource_security(self):
@@ -127,20 +166,19 @@ class RecipesTestCase(BaseTestCase):
         with self.client as test_client:
             # Ensure no access without Authorization
             response = test_client.get(
-                '/category/1/recipes', content_type='application/json'
+                '/api/v1/category/1/recipes', content_type='application/json'
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], "Please provide an access token!")
             # Ensure no access with invalid authorization
             response = test_client.get(
-                '/category/1/recipes', headers=dict(Authorization="Some98247982hnidutie3rojgnadf"),
+                '/api/v1/category/1/recipes',
+                headers=dict(Authorization="Some98247982hnidutie3rojgnadf"),
                 content_type='application/json'
             )
             self.assert401(response, "Wrong reponse code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Invalid token. Login to use this resource!')
 
     def test_recipes_view(self):
@@ -152,38 +190,32 @@ class RecipesTestCase(BaseTestCase):
         with self.client as test_client:
             # Retrieval from a valid category with no recipes yet
             response = test_client.get(
-                '/category/1/recipes', headers=self.auth_header,
+                '/api/v1/category/1/recipes', headers=self.auth_header,
                 content_type='application/json'
             )
             response_data = json.loads(response.data.decode())
             self.assertEqual(response_data['message'], 'No recipes added to this category yet!')
-            self.assertEqual(response_data['status'], 'Success!')
             # Add test recipe
-            add_recipe_resp = test_client.post(
-                '/category/1/recipes', headers=self.auth_header,
+            add_recipe_response = test_client.post(
+                '/api/v1/category/1/recipes', headers=self.auth_header,
                 data=test_recipe, content_type='application/json'
             )
-            self.assertEqual(
-                json.loads(add_recipe_resp.data.decode())['status'],
-                'Success!'
-            )
+            self.assertEqual(add_recipe_response.status_code, 201)
             # Retrive recipe
             response = test_client.get(
-                '/category/1/recipes', headers=self.auth_header,
+                '/api/v1/category/1/recipes', headers=self.auth_header,
                 content_type='application/json'
             )
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Success!')
             self.assertEqual(len(response_data['recipes']), 1)
 
             # Attempt retrieval from an invalid category
             response = test_client.get(
-                '/category/2/recipes', headers=self.auth_header,
+                '/api/v1/category/2/recipes', headers=self.auth_header,
                 content_type='application/json'
             )
             self.assert400(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Invalid category!')
 
     def test_single_recipe_retrival_resource_security(self):
@@ -194,21 +226,18 @@ class RecipesTestCase(BaseTestCase):
         # Attempt access with no authorization
         with self.client as test_client:
             response = test_client.get(
-                '/category/1/recipes/1', content_type='application/json'
+                '/api/v1/category/1/recipes/1', content_type='application/json'
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Please provide an access token!')
-        # Attempt access with invalid authorization
-        with self.client as test_client:
+            # Attempt access with invalid authorization
             response = test_client.get(
-                '/category/1/recipes/1', headers=dict(Authorization="gih248h9ehg2iu028"),
+                '/api/v1/category/1/recipes/1', headers=dict(Authorization="gih248h9ehg2iu028"),
                 content_type='application/json'
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(
                 response_data['message'],
                 'Invalid token. Login to use this resource!'
@@ -225,7 +254,7 @@ class RecipesTestCase(BaseTestCase):
         with self.client as test_client:
             # add test recipe
             response = test_client.post(
-                '/category/1/recipes', headers=self.auth_header,
+                '/api/v1/category/1/recipes', headers=self.auth_header,
                 data=test_recipe, content_type='application/json'
             )
             self.assertEqual(response.status_code, 201)
@@ -233,34 +262,31 @@ class RecipesTestCase(BaseTestCase):
             # Retrieve recipe from a valid category with a
             # valid recipe id
             response = test_client.get(
-                '/category/1/recipes/1', headers=self.auth_header,
+                '/api/v1/category/1/recipes/1', headers=self.auth_header,
                 content_type='application/json'
             )
             self.assert200(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
             self.assertEqual(len(response_data['recipes']), 1)
 
             # retrieve recipe from a valid category with an
             # invalid recipe id
             response = test_client.get(
-                '/category/1/recipes/2', headers=self.auth_header,
+                '/api/v1/category/1/recipes/2', headers=self.auth_header,
                 content_type='application/json'
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Recipe does not exist!")
 
             # retrieve recipe from an invalid category with a
             # valid/invalid recipe id
             response = test_client.get(
-                '/category/2/recipes/2', headers=self.auth_header,
+                '/api/v1/category/2/recipes/2', headers=self.auth_header,
                 content_type='application/json'
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Category does not exist!")
 
     def test_single_recipe_update_resource_security(self):
@@ -271,21 +297,20 @@ class RecipesTestCase(BaseTestCase):
         # Attempt access with no authorization
         with self.client as test_client:
             response = test_client.put(
-                '/category/1/recipes/1', data=test_recipe_update, content_type='application/json'
-            )
-            self.assert401(response, "Invalid status code: " + str(response.status_code))
-            response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
-            self.assertEqual(response_data['message'], 'Please provide an access token!')
-
-            # Attempt access with invalid authorization
-            response = test_client.put(
-                '/category/1/recipes/1', headers=dict(Authorization="gih248h9ehg2iu028"),
+                '/api/v1/category/1/recipes/1',
                 data=test_recipe_update, content_type='application/json'
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
+            self.assertEqual(response_data['message'], 'Please provide an access token!')
+
+            # Attempt access with invalid authorization
+            response = test_client.put(
+                '/api/v1/category/1/recipes/1', headers=dict(Authorization="gih248h9ehg2iu028"),
+                data=test_recipe_update, content_type='application/json'
+            )
+            self.assert401(response, "Invalid status code: " + str(response.status_code))
+            response_data = json.loads(response.data.decode())
             self.assertEqual(
                 response_data['message'],
                 'Invalid token. Login to use this resource!'
@@ -302,43 +327,61 @@ class RecipesTestCase(BaseTestCase):
         with self.client as test_client:
             # add test recipe
             response = test_client.post(
-                '/category/1/recipes', headers=self.auth_header,
+                '/api/v1/category/1/recipes', headers=self.auth_header,
                 data=test_recipe, content_type='application/json'
             )
             self.assertEqual(response.status_code, 201)
 
             # Update a recipe from a valid category with a
-            # valid recipe id
+            # valid recipe id with new name and new details
             response = test_client.put(
-                '/category/1/recipes/1', headers=self.auth_header,
+                '/api/v1/category/1/recipes/1', headers=self.auth_header,
                 data=test_recipe_update, content_type='application/json'
             )
             self.assert200(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
-            self.assertEqual(len(response_data['recipes']), 1)
-            self.assertEqual(response_data['recipes'][0]['recipe_name'], 'Mint Chocolate chip')
+            self.assertEqual(
+                response_data["message"],
+                "Recipe '{}' was successfully updated to '{}'.".format(
+                    _clean_name(json.loads(test_recipe)['recipe_name']),
+                    _clean_name(json.loads(test_recipe_update)['recipe_name'])
+                )
+            )
+
+            # Update a recipe from a valid category with a
+            # valid recipe id with same name but new details
+            json.loads(test_recipe_update)['description'] = "This is how to prepare..."
+            response = test_client.put(
+                '/api/v1/category/1/recipes/1', headers=self.auth_header,
+                data=test_recipe_update, content_type='application/json'
+            )
+            self.assert200(response, "Invalid status code: " + str(response.status_code))
+            response_data = json.loads(response.data.decode())
+            self.assertEqual(
+                response_data["message"],
+                "Recipe '{}' was successfully updated.".format(
+                    _clean_name(json.loads(test_recipe_update)['recipe_name'])
+                )
+            )
 
             # Update recipe from a valid category with an
             # invalid recipe id
             response = test_client.put(
-                '/category/1/recipes/2', headers=self.auth_header,
+                '/api/v1/category/1/recipes/2', headers=self.auth_header,
                 data=test_recipe_update, content_type='application/json'
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Recipe does not exist!")
 
             # Update recipe from an valid category with a
             # valid/invalid recipe id
             response = test_client.put(
-                '/category/2/recipes/2', headers=self.auth_header,
+                '/api/v1/category/2/recipes/2', headers=self.auth_header,
                 data=test_recipe_update, content_type='application/json'
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Category does not exist!")
 
     def test_single_recipe_delete_resource_security(self):
@@ -349,20 +392,18 @@ class RecipesTestCase(BaseTestCase):
         # Attempt access with no authorization
         with self.client as test_client:
             response = test_client.delete(
-                '/category/1/recipes/1', content_type='application/json'
+                '/api/v1/category/1/recipes/1', content_type='application/json'
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(response_data['message'], 'Please provide an access token!')
             # Attempt access with invalid authorization
-            response = test_client.get(
-                '/category/1/recipes/1', headers=dict(Authorization="gih248h9ehg2iu028"),
+            response = test_client.delete(
+                '/api/v1/category/1/recipes/1', headers=dict(Authorization="gih248h9ehg2iu028"),
                 content_type='application/json'
             )
             self.assert401(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], 'Fail!')
             self.assertEqual(
                 response_data['message'],
                 'Invalid token. Login to use this resource!'
@@ -379,7 +420,7 @@ class RecipesTestCase(BaseTestCase):
         with self.client as test_client:
             # add test recipe
             response = test_client.post(
-                '/category/1/recipes', headers=self.auth_header,
+                '/api/v1/category/1/recipes', headers=self.auth_header,
                 data=test_recipe, content_type='application/json'
             )
             self.assertEqual(response.status_code, 201)
@@ -387,45 +428,41 @@ class RecipesTestCase(BaseTestCase):
             # Retrieve recipe from a valid category with a
             # valid recipe id
             response = test_client.get(
-                '/category/1/recipes/1', headers=self.auth_header,
+                '/api/v1/category/1/recipes/1', headers=self.auth_header,
                 content_type='application/json'
             )
             self.assert200(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
             self.assertEqual(len(response_data['recipes']), 1)
 
             # Delete recipe from a valid category with a
             # valid recipe id
             response = test_client.delete(
-                '/category/1/recipes/1', headers=self.auth_header,
+                '/api/v1/category/1/recipes/1', headers=self.auth_header,
                 content_type='application/json'
             )
             self.assert200(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Success!")
             self.assertEqual(
-                response_data['message'], 'Recipe Chocolate chip was deleted successfully!'
+                response_data['message'], 'Recipe chocolate_chip was deleted successfully!'
             )
 
             # Delete recipe from a valid category with an
             # invalid recipe id
             response = test_client.delete(
-                '/category/1/recipes/1', headers=self.auth_header,
+                '/api/v1/category/1/recipes/1', headers=self.auth_header,
                 content_type='application/json'
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Recipe does not exist!")
 
             # Delete recipe from an invalid category with a
             # valid/invalid recipe id
             response = test_client.delete(
-                '/category/2/recipes/2', headers=self.auth_header,
+                '/api/v1/category/2/recipes/2', headers=self.auth_header,
                 content_type='application/json'
             )
             self.assert404(response, "Invalid status code: " + str(response.status_code))
             response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['status'], "Fail!")
             self.assertEqual(response_data['message'], "Category does not exist!")

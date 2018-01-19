@@ -1,5 +1,4 @@
 """The API routes"""
-from functools import wraps
 from datetime import datetime, timedelta
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask import jsonify, request, make_response
@@ -7,9 +6,11 @@ from flask_restplus import Resource
 from flask_jwt import jwt
 
 from app import APP
-from .restplus import API
-from .models import db, User, BlacklistToken
-from .serializers import add_user, login_user, password_reset
+from app.helpers import decode_access_token
+from app.helpers.validators import UserSchema
+from app.restplus import API
+from app.models import db, User, BlacklistToken
+from app.serializers import add_user, login_user, password_reset
 
 # Linting exceptions
 
@@ -19,63 +20,7 @@ from .serializers import add_user, login_user, password_reset
 # pylint: disable=E1101
 # pylint: disable=R0201
 
-user_ns = API.namespace('users', description="User administration operations.")
 auth_ns = API.namespace('auth', description="Authentication/Authorization operations.")
-
-# token decode function:
-def decode_access_token(access_token):
-    """
-    Validates the user access token
-
-    :param str access_token: The access token tp be decoded
-    :return: integer|string
-    """
-    try:
-        payload = jwt.decode(access_token, APP.config.get('SECRET_KEY'))
-        is_blacklisted_token = BlacklistToken.check_blacklisted(access_token)
-        if is_blacklisted_token:
-            return 'Token blacklisted. Please log in again.'
-        public_id = payload['sub']
-        user = User.query.filter_by(public_id=public_id).first()
-        return user.id
-    except jwt.ExpiredSignatureError:
-        return 'Signature expired. Please log in again.'
-    except jwt.InvalidTokenError:
-        return 'Invalid token. Please log in again.'
-
-# Route security decorator
-def authorization_required(func):
-    """
-    Ensures that only authorized users can access
-    certain resources
-    """
-
-    @wraps(func)
-    def decorated(*args, **kwargs):
-
-        """
-        Resource security decorator function
-        """
-        token = None
-
-        if 'Authorization' in request.headers:
-            token = request.headers['Authorization']
-
-        if not token:
-            response_obj = {
-                "message": "Please provide an access token!",
-                "status": "Fail!"
-            }
-            return make_response(jsonify(response_obj), 401)
-
-        result = decode_access_token(token)
-
-        if not isinstance(result, str):
-            current_user = User.query.filter_by(id=result).first()
-            return func(current_user, *args, **kwargs)
-        current_user = None
-        return func(current_user, *args, **kwargs)
-    return decorated
 
 @auth_ns.route('/register')
 class RegisterHandler(Resource):
@@ -90,8 +35,19 @@ class RegisterHandler(Resource):
         """
         data = request.get_json()
 
+        # Instanciate user schema
+        user_schema = UserSchema()
+        data, errors = user_schema.load(data)
+
+        if errors:
+            response_obj = dict(
+                errors=errors
+            )
+            return make_response(jsonify(response_obj), 422)
+
         # Check if user exists
-        user = User.query.filter_by(email=data['email']).first()
+        email = data['email'].lower()
+        user = User.query.filter_by(email=email).first()
         if not user:
             try:
                 new_user = User(
@@ -101,8 +57,8 @@ class RegisterHandler(Resource):
                 db.session.commit()
                 return make_response(jsonify({'message': 'Registered successfully!'}), 201)
             except:
-                response = {"message": "Some error occured. Please retry."}
-                return make_response(jsonify(response), 501)
+                response = {"message": "Username already taken, please choose another."}
+                return make_response(jsonify(response), 401)
         else:
             response = jsonify({'message': 'User already exists. Please Log in instead.'})
             return make_response(response, 400)

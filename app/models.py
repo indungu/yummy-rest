@@ -41,7 +41,7 @@ class Category(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    name = db.Column(db.String(40), unique=True, nullable=False)
+    name = db.Column(db.String(40), nullable=False)
     description = db.Column(db.String(40), unique=True, nullable=False)
     created_on = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_on = db.Column(
@@ -66,7 +66,7 @@ class Recipe(db.Model):
     category_id = db.Column(
         db.Integer, db.ForeignKey('categories.id'), nullable=False
     )
-    name = db.Column(db.String(40), unique=True, nullable=False)
+    name = db.Column(db.String(40), nullable=False)
     ingredients = db.Column(db.String(200), nullable=False)
     description = db.Column(db.String(500), nullable=False)
     created_on = db.Column(db.DateTime, default=db.func.current_timestamp())
