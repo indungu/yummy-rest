@@ -63,6 +63,7 @@ def authorization_required(func):
         return func(current_user, *args, **kwargs)
     return decorated
 
+# sets the naming convention to be used
 def _clean_name(name):
     """
     This function sets the name of a recipe to the standard naming
@@ -87,3 +88,36 @@ def _pagination(paginate):
         item_count=len(paginate.items)
     )
     return pagination_details
+
+# Ensure user is authorized
+def is_unauthorized():
+    """
+    Ensure a user is authorized to access a certain resource
+    """
+    response_payload = dict(
+        message='Invalid token. Login to use this resource!'
+    )
+    response_payload = jsonify(response_payload)
+    return make_response(response_payload, 401)
+
+# Make a response payload
+def make_payload(category=None, recipe=None):
+    """Returns an appropriate response payload"""
+    if recipe:
+        return dict(
+                    recipe_id=recipe.id,
+                    recipe_name=recipe.name,
+                    recipe_ingredients=recipe.ingredients,
+                    recipe_description=recipe.description,
+                    date_created=recipe.created_on,
+                    date_updated=recipe.updated_on,
+                    category_id=recipe.category_id
+                   )
+    if category:
+        return dict(
+                    category_id=category.id,
+                    category_name= category.name,
+                    description= category.description,
+                    date_created= category.created_on,
+                    date_updated= category.updated_on
+                   )

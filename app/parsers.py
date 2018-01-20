@@ -14,7 +14,7 @@ SEARCH_PAGE_ARGS = {
 }
 
 # args documentation helper function
-def _make_args_parser(namespace):
+def make_args_parser(namespace):
     """
     This function receives a namespace object and returns
     a parser that can be documented for a particular enpoint/resource
