@@ -7,7 +7,8 @@ from app.models import db, Recipe
 from app.serializers import recipe
 from app.restplus import API
 from app.helpers import (
-    authorization_required, _clean_name, _pagination, is_unauthorized
+    authorization_required, _clean_name, _pagination, is_unauthorized,
+    make_payload
 )
 from app.helpers.validators import RecipeSchema
 from app.parsers import SEARCH_PAGE_ARGS, make_args_parser
@@ -25,6 +26,14 @@ recipes_ns = API.namespace(
 )
 
 args_parser = make_args_parser(recipes_ns)
+def _does_not_exist():
+    """Returns recipe does not exist message"""
+    response_payload = dict(
+        message="Recipe does not exist!"
+    )
+    response_payload = jsonify(response_payload)
+    return make_response(response_payload, 404)
+
 @recipes_ns.route('')
 class GeneralRecipesHandler(Resource):
     """
@@ -47,13 +56,10 @@ class GeneralRecipesHandler(Resource):
 
         request_payload = request.get_json()
         request_payload['recipe_name'] = _clean_name(request_payload['recipe_name'])
-
         # initialize schema object for input validation
         recipe_schema = RecipeSchema()
-
         # Validate input
         request_payload, errors = recipe_schema.load(request_payload)
-
         # Raise input validation error notification
         if errors:
             response_payload = dict(
@@ -61,7 +67,6 @@ class GeneralRecipesHandler(Resource):
                 errors=errors
             )
             return make_response(jsonify(response_payload), 422)
-
         category = current_user.categories.filter_by(id=category_id).first()
         if category:
             new_recipe = Recipe(
@@ -77,18 +82,8 @@ class GeneralRecipesHandler(Resource):
             if not existing_recipe:
                 db.session.add(new_recipe)
                 db.session.commit()
-
                 response_payload = {
-                    'recipes': [dict(
-                        recipe_id=new_recipe.id,
-                        recipe_name=new_recipe.name,
-                        recipe_ingredients=new_recipe.ingredients,
-                        recipe_description=new_recipe.description,
-                        category=new_recipe.category_id,
-                        date_created=new_recipe.created_on,
-                        date_updated=new_recipe.updated_on,
-                        owner=new_recipe.user_id
-                    )]
+                    'recipes': [make_payload(recipe=new_recipe)]
                 }
                 response_payload = jsonify(response_payload)
                 return make_response(response_payload, 201)
@@ -146,16 +141,8 @@ class GeneralRecipesHandler(Resource):
             pagination_details = _pagination(recipes)
             user_recipes = []
             for current_recipe in recipes.items:
-                user_recipe = dict(
-                    category_id=current_recipe.category_id,
-                    recipe_id=current_recipe.id,
-                    recipe_name=current_recipe.name,
-                    recipe_ingredients=current_recipe.ingredients,
-                    recipe_description=current_recipe.description,
-                    date_created=current_recipe.created_on,
-                    date_modified=current_recipe.updated_on,
-                )
-                user_recipes.append(user_recipe)
+                this_recipe = make_payload(recipe=current_recipe)
+                user_recipes.append(this_recipe)
             if user_recipes:
                 response_payload = {
                     "recipes": user_recipes,
@@ -199,23 +186,11 @@ class SingleRecipeHandler(Resource):
 
             # When the recipe requested does not exist
             if not selected_recipe:
-                response_payload = dict(
-                    message="Recipe does not exist!"
-                )
-                response_payload = jsonify(response_payload)
-                return make_response(response_payload, 404)
+                return _does_not_exist()
 
             # Return the recipe
             response_payload = {
-                "recipes": [dict(
-                    recipe_id=selected_recipe.id,
-                    recipe_name=selected_recipe.name,
-                    recipe_ingredients=selected_recipe.ingredients,
-                    recipe_description=selected_recipe.description,
-                    date_created=selected_recipe.created_on,
-                    date_updated=selected_recipe.updated_on,
-                    category_name=category.name
-                )]
+                "recipes": [make_payload(recipe=selected_recipe)]
             }
             response_payload = jsonify(response_payload)
             return make_response(response_payload, 200)
@@ -245,16 +220,10 @@ class SingleRecipeHandler(Resource):
 
             # When the recipe requested does not exist
             if not selected_recipe:
-                response_payload = dict(
-                    message="Recipe does not exist!"
-                )
-                response_payload = jsonify(response_payload)
-                return make_response(response_payload, 404)
-
+                return _does_not_exist()
             # Get request data
             request_payload = request.get_json()
             new_recipe_name = _clean_name(request_payload['recipe_name'])
-
             # Check if name provided is of an existing recipe
             existing_recipe = current_user.recipes.filter(
                 Recipe.name == new_recipe_name,
@@ -314,16 +283,11 @@ class SingleRecipeHandler(Resource):
             selected_recipe = category.recipes.filter_by(id=recipe_id).first()
             # When the recipe requested does not exist
             if not selected_recipe:
-                response_payload = dict(
-                    message="Recipe does not exist!"
-                )
-                response_payload = jsonify(response_payload)
-                return make_response(response_payload, 404)
+                return _does_not_exist()
             name = selected_recipe.name
             # Delete the selected recipe
             db.session.delete(selected_recipe)
             db.session.commit()
-
             # Render response
             response_payload = {
                 "message": "Recipe " + name + " was deleted successfully!"

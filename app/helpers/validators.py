@@ -86,7 +86,11 @@ def validate_name(name):
     This validates that the name provided meets the set criteria for validity.
     """
 
-    if len(name) < 3:
+    if not name:
+        raise ValidationError(
+            "Name is a required value and cannot be empty."
+        )
+    elif len(name) < 3:
         raise ValidationError(
             "Name too short. Should be 3 or more characters."
         )
@@ -103,7 +107,11 @@ def validate_description(data):
     This validates that the name provided meets the set criteria for validity.
     """
 
-    if len(data) > 50:
+    if not data:
+        raise ValidationError(
+            "Description is a required value and cannot be empty."
+        )
+    elif len(data) > 50:
         raise ValidationError(
             "Description should not be more than 50 characters long."
         )
@@ -130,6 +138,10 @@ def validate_input(data):
     characters
     """
 
+    if not data:
+        raise ValidationError(
+            "This is a required value and cannot be empty."
+        )
     input_re = re.compile(r"\s")
     valid = re.sub(input_re, '', data)
     if not valid:
