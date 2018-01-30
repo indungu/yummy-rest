@@ -149,7 +149,9 @@ class CategoryTestCase(BaseTestCase):
             )
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 401)
-            self.assertEqual(response_data['message'], "Login to use this resource!")
+            self.assertEqual(
+                response_data['message'], "Invalid token. Login to use this resource!"
+            )
 
     def test_category_view_unregistered_user(self):
         """Ensure that only authorized users can view categories"""
@@ -168,7 +170,9 @@ class CategoryTestCase(BaseTestCase):
             )
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 401)
-            self.assertEqual(response_data['message'], "Login to use this resource!")
+            self.assertEqual(
+                response_data['message'], "Invalid token. Login to use this resource!"
+            )
 
     def test_category_view_registered_user(self):
         """Ensure a registered/logged in user can view their categories"""

@@ -3,10 +3,13 @@ from flask import request, jsonify, make_response
 from flask_restplus import Resource
 from webargs.flaskparser import parser
 
-from app.helpers import authorization_required, _pagination, _clean_name
+from app.helpers import (
+    authorization_required, _pagination, _clean_name, is_unauthorized,
+    make_payload
+)
 from app.helpers.validators import CategorySchema
 from app.models import db, Category
-from app.parsers import SEARCH_PAGE_ARGS, _make_args_parser
+from app.parsers import SEARCH_PAGE_ARGS, make_args_parser
 from app.restplus import API
 from app.serializers import category
 
@@ -26,7 +29,7 @@ categories_ns = API.namespace(
     path='/category'
 )
 
-args_parser = _make_args_parser(categories_ns)
+args_parser = make_args_parser(categories_ns)
 
 @categories_ns.route('')
 class CategoryHandler(Resource):
@@ -37,111 +40,94 @@ class CategoryHandler(Resource):
     def post(current_user, self):
         """Add Recipe Category"""
 
-        if current_user:
-            # get request data
-            request_payload = request.get_json()
+        if not current_user:
+            return is_unauthorized()
 
-            # initialize validation schema
-            category_schema = CategorySchema()
+        # get request data
+        request_payload = request.get_json()
 
-            request_payload, errors = category_schema.load(request_payload)
+        # initialize validation schema
+        category_schema = CategorySchema()
 
-            if errors:
-                return make_response(jsonify(dict(errors=errors)), 422)
+        request_payload, errors = category_schema.load(request_payload)
 
-            category_name = _clean_name(request_payload['category_name'])
+        if errors:
+            return make_response(jsonify(dict(errors=errors)), 422)
 
-            # check if category exists
-            existing_category = current_user.categories.filter_by(
-                name=category_name
-            ).first()
-            if not existing_category:
-                name = category_name
-                owner = current_user.id
-                description = request_payload['description']
+        category_name = _clean_name(request_payload['category_name'])
 
-                # Add new category
-                try:
-                    new_category = Category(name, owner, description)
-                    db.session.add(new_category)
-                    db.session.commit()
-                    response_payload = {
-                        "categories": [dict(
-                            category_id=new_category.id,
-                            category_name=new_category.name,
-                            description=new_category.description,
-                            owner_id=owner,
-                            date_created=new_category.created_on,
-                            date_updated=new_category.updated_on
-                        )]
-                    }
-                    response_payload = jsonify(response_payload)
-                    return make_response(response_payload, 201)
-                except:
-                    response_payload = dict(
-                        message="Some error occured. Please try again later."
-                    )
-                    response_payload = jsonify(response_payload)
-                    return make_response(response_payload, 501)
-            response_payload = dict(
-                message="The category already exists!"
-            )
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 400)
+        # check if category exists
+        existing_category = current_user.categories.filter_by(
+            name=category_name
+        ).first()
+        if not existing_category:
+            name = category_name
+            owner = current_user.id
+            description = request_payload['description']
+
+            # Add new category
+            try:
+                new_category = Category(name, owner, description)
+                db.session.add(new_category)
+                db.session.commit()
+                response_payload = {
+                    "categories": [make_payload(category=new_category)]
+                }
+                response_payload = jsonify(response_payload)
+                return make_response(response_payload, 201)
+            except:
+                response_payload = dict(
+                    message="Some error occured. Please try again later."
+                )
+                response_payload = jsonify(response_payload)
+                return make_response(response_payload, 501)
         response_payload = dict(
-            message='Login to use this resource!'
+            message="The category already exists!"
         )
         response_payload = jsonify(response_payload)
-        return make_response(response_payload, 401)
+        return make_response(response_payload, 400)
+    
 
     @categories_ns.expect(args_parser)
     @authorization_required
     def get(current_user, self):
         """Returns a list of user's recipe categories"""
 
-        if current_user:
-            if not current_user.categories.all():
-                return make_response( \
-            jsonify({'message': 'No categories exist. Please create some.'}))
-            # parse args if provided
-            args = parser.parse(SEARCH_PAGE_ARGS, request)
-            if 'q' in args:
-                try:
-                    all_categories = current_user.categories.filter(
-                        Category.name.ilike("%" + args['q'] + "%")
-                    ).paginate(page=args['page'], per_page=args['per_page'], error_out=False)
-                except KeyError:
-                    all_categories = current_user.categories.filter(
-                        Category.name.ilike("%" + args['q'] + "%")
-                    ).paginate(page=1, per_page=5)
-            else:
-                all_categories = current_user.categories.paginate(error_out=False)
-            pagination_details = _pagination(all_categories)
-            categories = []
-            for cat in all_categories.items:
-                catg = dict(
-                    category_id=cat.id,
-                    category_name=cat.name,
-                    description=cat.description,
-                    date_created=cat.created_on,
-                    date_updated=cat.updated_on
-                )
-                categories.append(catg)
-            if categories:
-                response_payload = {
-                    "categories": categories,
-                    "page_details": pagination_details
-                }
-            else:
-                response_payload = {
-                    "message": "Page does not exist."
-                }
-            return make_response(jsonify(response_payload), 200)
-        response_payload = dict(
-            message='Login to use this resource!'
-        )
-        response_payload = jsonify(response_payload)
-        return make_response(response_payload, 401)
+        if not current_user:
+            return is_unauthorized()
+
+        if not current_user.categories.all():
+            return make_response( \
+        jsonify({'message': 'No categories exist. Please create some.'}))
+        # parse args if provided
+        args = parser.parse(SEARCH_PAGE_ARGS, request)
+        if 'q' in args:
+            try:
+                all_categories = current_user.categories.filter(
+                    Category.name.ilike("%" + args['q'] + "%")
+                ).paginate(page=args['page'], per_page=args['per_page'], error_out=False)
+            except KeyError:
+                all_categories = current_user.categories.filter(
+                    Category.name.ilike("%" + args['q'] + "%")
+                ).paginate(page=1, per_page=5)
+        else:
+            all_categories = current_user.categories.paginate(error_out=False)
+        pagination_details = _pagination(all_categories)
+        categories = []
+        for each_category in all_categories.items:
+            this_category = make_payload(category=each_category)
+            categories.append(this_category)
+        if categories:
+            response_payload = {
+                "categories": categories,
+                "page_details": pagination_details
+            }
+        else:
+            response_payload = {
+                "message": "Page does not exist."
+            }
+        return make_response(jsonify(response_payload), 200)
+        
 
 @categories_ns.route('/<int:id>')
 class SingleCategoryResource(Resource):
@@ -157,25 +143,15 @@ class SingleCategoryResource(Resource):
 
         :param: id (int)
         """
-        if not current_user:
-            response_payload = dict(
-                message='Invalid token. Login to use this resource!'
-            )
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 401)
 
+        if not current_user:
+            return is_unauthorized()
         # retrieve specified category
         specified_category = current_user.categories.filter_by(id=id).first()
 
         if specified_category:
             response_payload = {
-                "categories": [dict(
-                    category_id=specified_category.id,
-                    category_name=specified_category.name,
-                    description=specified_category.description,
-                    date_created=specified_category.created_on,
-                    date_updated=specified_category.updated_on
-                )]
+                "categories": [make_payload(category=specified_category)]
             }
             response_payload = jsonify(response_payload)
             return make_response(response_payload, 200)
@@ -191,14 +167,11 @@ class SingleCategoryResource(Resource):
         """
         Updates the specified category
 
-        :param: id (int)
+        :param: id (int) The id of the specified category
         """
+
         if not current_user:
-            response_payload = dict(
-                message='Invalid token. Login to use this resource!'
-            )
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 401)
+            return is_unauthorized()
 
         # retrieve specified category
         specified_category = current_user.categories.filter_by(id=id).first()
@@ -206,10 +179,8 @@ class SingleCategoryResource(Resource):
         if specified_category:
             # Get request data
             request_payload = request.get_json()
-
             # format new name
             new_category_name = _clean_name(request_payload['category_name'])
-
             # Ensure the category name does not match that any of the user's
             # existing category apart from the one they are editing
             existing_category = current_user.categories.filter(
@@ -257,12 +228,9 @@ class SingleCategoryResource(Resource):
 
         :param: id (int)
         """
+
         if not current_user:
-            response_payload = dict(
-                message='Invalid token. Login to use this resource!'
-            )
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 401)
+            return is_unauthorized()
 
         # retrieve specified category
         specified_category = current_user.categories.filter_by(id=id).first()
