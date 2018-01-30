@@ -2,6 +2,8 @@
 [![Build Status](https://travis-ci.org/indungu/yummy-rest.svg?branch=develop)](https://travis-ci.org/indungu/yummy-rest)
 [![Coverage Status](https://coveralls.io/repos/github/indungu/yummy-rest/badge.svg?branch=develop)](https://coveralls.io/github/indungu/yummy-rest?branch=develop) [![Maintainability](https://api.codeclimate.com/v1/badges/072ecd4ee97bb2e437d9/maintainability)](https://codeclimate.com/github/indungu/yummy-rest/maintainability)
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/c5cdd555fe3c4ac7abb40ed49d369882)](https://www.codacy.com/app/indungu/yummy-rest?utm_source=github.com&utm_medium=referral&utm_content=indungu/yummy-rest&utm_campaign=badger)
+
 This is a RESTful API implementation of the Yummy Recipes developer challenge. It is based on Flask with data persistence achieved using PostgreSQL.
 
 ## Prerequisites
