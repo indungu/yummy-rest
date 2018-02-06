@@ -112,7 +112,12 @@ class CategoryHandler(Resource):
                 ).paginate(page=1, per_page=5)
         else:
             all_categories = current_user.categories.paginate(error_out=False)
-        pagination_details = _pagination(all_categories)
+        base_url = request.base_url
+        if 'q' in args:
+            pagination_details = _pagination(all_categories, base_url, q=args['q'])            
+        else:
+            pagination_details = _pagination(all_categories, base_url)
+            
         categories = []
         for each_category in all_categories.items:
             this_category = make_payload(category=each_category)
