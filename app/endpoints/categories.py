@@ -86,7 +86,6 @@ class CategoryHandler(Resource):
         )
         response_payload = jsonify(response_payload)
         return make_response(response_payload, 400)
-    
 
     @categories_ns.expect(args_parser)
     @authorization_required
@@ -101,7 +100,7 @@ class CategoryHandler(Resource):
         jsonify({'message': 'No categories exist. Please create some.'}))
         # parse args if provided
         args = parser.parse(SEARCH_PAGE_ARGS, request)
-        if 'q' in args:
+        if 'q' in args: # pragma: no cover
             try:
                 all_categories = current_user.categories.filter(
                     Category.name.ilike("%" + args['q'] + "%")
@@ -113,11 +112,10 @@ class CategoryHandler(Resource):
         else:
             all_categories = current_user.categories.paginate(error_out=False)
         base_url = request.base_url
-        if 'q' in args:
+        if 'q' in args: # pragma: no cover
             pagination_details = _pagination(all_categories, base_url, q=args['q'])            
         else:
             pagination_details = _pagination(all_categories, base_url)
-            
         categories = []
         for each_category in all_categories.items:
             this_category = make_payload(category=each_category)
