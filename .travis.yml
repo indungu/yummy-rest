@@ -1,0 +1,22 @@
+# Language
+language:
+  - python
+# Supported version
+python:
+  - 3.6
+# Install dependecies
+install:
+  - pip install -r requirements.txt
+# Database service
+services:
+  - postgresql
+# Database setup
+before_script:
+  - psql -c 'create database yummy_rest;' -U postgres
+  - psql -c 'create database yummy_rest_test;' -U postgres
+# Test Script
+script:
+  - pytest --cov=app/ tests/
+# Coveralls reporting
+after_success:
+  - coveralls
