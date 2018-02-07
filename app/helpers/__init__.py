@@ -74,17 +74,35 @@ def _clean_name(name):
     return name.lower()
 
 # Pagination details
-def _pagination(paginate):
+def _pagination(paginate, base_url, q=None): # pragma: no cover
     """
-    :param pginate: a instance of the Pagination class with paginated query results
+    :param paginate: a instance of the Pagination class with paginated query results
+    :param base_url: the endpoint url on which the request was made
+    :param q: the query string
 
     :returns pagination_details: a Python dictionary with various pagination details.
     """
 
+    base_url = base_url + "?"
+    if q:
+        print(q)
+        base_url = base_url+"q="+q
+    if paginate.has_next:
+        next_page = base_url+"&page="+str(paginate.next_num)+"&per_page={}".format(
+            str(len(paginate.items))
+        )
+    else:
+        next_page = paginate.next_num
+    if paginate.has_prev:
+        previous_page = base_url+"&page="+str(paginate.prev_num)+"&per_page={}".format(
+            str(len(paginate.items))
+        )
+    else:
+        previous_page = paginate.prev_num
     pagination_details = dict(
         pages=paginate.pages,
-        previous_page=paginate.prev_num,
-        next_page=paginate.next_num,
+        previous_page=previous_page,
+        next_page=next_page,
         item_count=len(paginate.items)
     )
     return pagination_details

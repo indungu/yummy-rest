@@ -138,7 +138,11 @@ class GeneralRecipesHandler(Resource):
                     ).paginate(page=1, per_page=5)
             else:
                 recipes = category.recipes.paginate(error_out=False)
-            pagination_details = _pagination(recipes)
+            base_url = request.base_url
+            if 'q' in args:
+                pagination_details = _pagination(recipes, base_url, q=args['q'])
+            else:
+                pagination_details = _pagination(recipes, base_url)
             user_recipes = []
             for current_recipe in recipes.items:
                 this_recipe = make_payload(recipe=current_recipe)
