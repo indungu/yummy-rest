@@ -1,6 +1,7 @@
 Flask-JWT==0.3.2
 Flask-Migrate==2.1.1
 Flask-Restplus==0.10.1
+Flask-Script==2.0.6
 Flask-SQLAlchemy==2.3.2
 Flask-Testing==0.7.1
 coveralls==1.2.0
