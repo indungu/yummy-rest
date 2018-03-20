@@ -55,7 +55,7 @@ class GeneralRecipesHandler(Resource):
             return is_unauthorized()
 
         request_payload = request.get_json()
-        request_payload['recipe_name'] = _clean_name(request_payload['recipe_name'])
+        request_payload['name'] = _clean_name(request_payload['name'])
         # initialize schema object for input validation
         recipe_schema = RecipeSchema()
         # Validate input
@@ -70,14 +70,14 @@ class GeneralRecipesHandler(Resource):
         category = current_user.categories.filter_by(id=category_id).first()
         if category:
             new_recipe = Recipe(
-                name=request_payload['recipe_name'],
+                name=request_payload['name'],
                 category_id=category_id,
                 user_id=current_user.id,
                 ingredients=request_payload['ingredients'],
                 description=request_payload['description']
             )
             existing_recipe = category.recipes.filter_by(
-                name=request_payload['recipe_name']
+                name=request_payload['name']
             ).first()
             if not existing_recipe:
                 db.session.add(new_recipe)
@@ -121,7 +121,7 @@ class GeneralRecipesHandler(Resource):
                     message='No recipes added to this category yet!'
                 )
                 response_payload = jsonify(response_payload)
-                return make_response(response_payload, 200)
+                return make_response(response_payload, 404)
 
             # search and/or paginate
             args = parser.parse(SEARCH_PAGE_ARGS, request)
@@ -227,7 +227,7 @@ class SingleRecipeHandler(Resource):
                 return _does_not_exist()
             # Get request data
             request_payload = request.get_json()
-            new_recipe_name = _clean_name(request_payload['recipe_name'])
+            new_recipe_name = _clean_name(request_payload['name'])
             # Check if name provided is of an existing recipe
             existing_recipe = current_user.recipes.filter(
                 Recipe.name == new_recipe_name,

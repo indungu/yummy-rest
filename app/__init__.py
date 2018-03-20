@@ -2,6 +2,7 @@
 import os
 from flask import Flask, make_response, jsonify, redirect
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 
 # Linting exception
 # pylint: disable=C0103
@@ -53,3 +54,4 @@ API.add_namespace(auth_ns)
 API.add_namespace(categories_ns)
 API.add_namespace(recipes_ns)
 API.init_app(APP)
+CORS(APP)

@@ -94,13 +94,6 @@ def validate_name(name):
         raise ValidationError(
             "Name too short. Should be 3 or more characters."
         )
-    else:
-        name_re = re.compile(r"^[a-zA-Z_.]+$")
-        valid = re.fullmatch(name_re, name)
-        if not valid:
-            raise ValidationError(
-                "Name should only contain letters, an underscore and/or a period."
-            )
 
 def validate_description(data):
     """
@@ -129,7 +122,7 @@ class CategorySchema(Schema):
     This schema validates user input when creating a new category
     """
 
-    category_name = fields.Str(required=True, validate=validate_name)
+    name = fields.Str(required=True, validate=validate_name)
     description = fields.Str(required=True, validate=validate_description)
 
 def validate_input(data):
@@ -154,6 +147,6 @@ class RecipeSchema(Schema):
     Validates the input recipe details
     """
 
-    recipe_name = fields.Str(required=True, validate=validate_name)
+    name = fields.Str(required=True, validate=validate_name)
     ingredients = fields.Str(required=True, validate=validate_input)
     description = fields.Str(required=True, validate=validate_input)

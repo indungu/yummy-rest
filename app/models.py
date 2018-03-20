@@ -42,7 +42,7 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     name = db.Column(db.String(40), nullable=False)
-    description = db.Column(db.String(40), unique=True, nullable=False)
+    description = db.Column(db.String(40), unique=False, nullable=False)
     created_on = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_on = db.Column(
         db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp()
