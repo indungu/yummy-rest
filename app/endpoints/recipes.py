@@ -137,7 +137,7 @@ class GeneralRecipesHandler(Resource):
                         Recipe.category_id == category.id
                     ).paginate(page=1, per_page=5)
             else:
-                recipes = category.recipes.paginate(error_out=False)
+                recipes = category.recipes.paginate(per_page=2)
             base_url = request.base_url
             if 'q' in args:
                 pagination_details = _pagination(recipes, base_url, q=args['q'])
@@ -152,12 +152,11 @@ class GeneralRecipesHandler(Resource):
                     "recipes": user_recipes,
                     "page_details": pagination_details
                 }
-            else:
-                response_payload = {
-                    "message": "Page does not exist."
-                }
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 200)
+                return make_response(jsonify(response_payload), 200)
+            response_payload = {
+                "message": "Recipe does not exist."
+            }
+            return make_response(jsonify(response_payload), 400)
         response_payload = dict(
             message='Invalid category!'
         )
@@ -259,7 +258,8 @@ class SingleRecipeHandler(Resource):
                     response_payload = {
                         "message": "Recipe '{}' was successfully updated.".format(
                             selected_recipe.name
-                        )
+                        ),
+                        "recipe": make_payload(recipe=selected_recipe)
                     }
                 response_payload = jsonify(response_payload)
                 return make_response(response_payload, 200)

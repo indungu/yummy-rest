@@ -92,9 +92,10 @@ class LoginHandler(Resource):
                     APP.config['SECRET_KEY'],
                     algorithm='HS256'
                 )
+                print(user.username)
                 return jsonify({"message": "Logged in successfully.",
                                 "access_token": token.decode('UTF-8'),
-                                "usernane": user.username
+                                "username": user.username
                                })
             return make_response(jsonify({"message": "Incorrect credentials."}), 401)
         except Exception as e:

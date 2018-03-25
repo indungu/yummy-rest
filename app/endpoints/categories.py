@@ -58,7 +58,7 @@ class CategoryHandler(Resource):
 
         # check if category exists
         existing_category = current_user.categories.filter_by(
-            name=category_name
+            name=request_payload['name']
         ).first()
         if not existing_category:
             name = request_payload['name']
@@ -71,7 +71,7 @@ class CategoryHandler(Resource):
                 db.session.add(new_category)
                 db.session.commit()
                 response_payload = {
-                    "categories": [make_payload(category=new_category)]
+                    "categories": make_payload(category=new_category)
                 }
                 response_payload = jsonify(response_payload)
                 return make_response(response_payload, 201)
@@ -110,7 +110,7 @@ class CategoryHandler(Resource):
                     Category.name.ilike("%" + args['q'] + "%")
                 ).paginate(page=1, per_page=5)
         else:
-            all_categories = current_user.categories.order_by(Category.id).paginate(page=1, per_page=5)
+            all_categories = current_user.categories.order_by(Category.id).paginate(per_page=5)
         base_url = request.base_url
         if 'q' in args: # pragma: no cover
             pagination_details = _pagination(all_categories, base_url, q=args['q'])            
@@ -125,11 +125,11 @@ class CategoryHandler(Resource):
                 "categories": categories,
                 "page_details": pagination_details
             }
-        else:
-            response_payload = {
-                "message": "Page does not exist."
-            }
-        return make_response(jsonify(response_payload), 200)
+            return make_response(jsonify(response_payload), 200)
+        response_payload = {
+            "message": "Category does not exist."
+        }
+        return make_response(jsonify(response_payload), 400)
         
 
 @categories_ns.route('/<int:id>')

@@ -42,52 +42,45 @@ login_details = dict(
 
 # Test Category details
 test_category = json.dumps(dict(
-    category_name="Cookies",
+    name="Cookies",
     description="All my cookies recipes."
 ))
 
 # Invalid Test Category details
 invalid_category = json.dumps(dict(
-    category_name="Co",
+    name="Co",
     description="All my cookies recipes. All my cookies recipes. All my cookies recipes."
 ))
 
 # Invalid Test Category details
 invalid_category_2 = json.dumps(dict(
-    category_name="C00kies",
+    name="C00kies",
     description="     "
 ))
 
 # Test Category update details
 test_category_update = json.dumps(dict(
-    category_name="Pies",
+    name="Pies",
     description="All my pie recipes."
 ))
 
 # invalid recipe details
 invalid_recipe = json.dumps(dict(
-    recipe_name='Ch',
+    name='Ch',
     ingredients="      ",
     description="Prepare with care and serve with love"
 ))
 
-# invalid recipe details
-invalid_recipe_2 = json.dumps(dict(
-    recipe_name='Ch0c0late',
-    ingredients="Some ingredients here\n\rSome others there.",
-    description="    "
-))
-
 # recipe details
 test_recipe = json.dumps(dict(
-    recipe_name='Chocolate chip',
+    name='Chocolate chip',
     ingredients="Some ingredients here\n\rSome others there.",
     description="Prepare with care and serve with love"
 ))
 
 # update recipe details
 test_recipe_update = json.dumps(dict(
-    recipe_name='Mint Chocolate chip',
+    name='Mint Chocolate chip',
     ingredients="Some ingredients there\n\rSome others here.",
     description="Prepare with love and serve with care"
 ))
