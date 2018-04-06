@@ -5,7 +5,7 @@ import json
 from app.helpers import _clean_name
 from .test_auth import BaseTestCase
 from .helpers import register_user, login_user, test_category, test_recipe, test_recipe_update,\
-                     invalid_recipe, invalid_recipe_2
+                     invalid_recipe
 
 # Linting exceptions
 # pylint: disable=C0103
@@ -111,27 +111,10 @@ class RecipesTestCase(BaseTestCase):
             self.assertEqual(response_data['message'], 'You provided some invalid details.')
             errors = response_data['errors']
             self.assertTrue(
-                'recipe_name' in errors
+                'name' in errors
             )
             self.assertEqual(
-                errors['recipe_name'][0], "Name too short. Should be 3 or more characters."
-            )
-            # When the recipe name is
-            # of invalid format
-            response = test_client.post(
-                '/api/v1/category/1/recipes', headers=self.auth_header,
-                data=invalid_recipe_2, content_type='application/json'
-            )
-            self.assertEqual(response.status_code, 422)
-            response_data = json.loads(response.data.decode())
-            self.assertEqual(response_data['message'], 'You provided some invalid details.')
-            errors = response_data['errors']
-            self.assertTrue(
-                'recipe_name' in errors
-            )
-            self.assertEqual(
-                errors['recipe_name'][0],
-                "Name should only contain letters, an underscore and/or a period."
+                errors['name'][0], "Name too short. Should be 3 or more characters."
             )
 
     def test_recipe_duplication(self):
@@ -343,8 +326,8 @@ class RecipesTestCase(BaseTestCase):
             self.assertEqual(
                 response_data["message"],
                 "Recipe '{}' was successfully updated to '{}'.".format(
-                    _clean_name(json.loads(test_recipe)['recipe_name']),
-                    _clean_name(json.loads(test_recipe_update)['recipe_name'])
+                    _clean_name(json.loads(test_recipe)['name']),
+                    _clean_name(json.loads(test_recipe_update)['name'])
                 )
             )
 
@@ -360,7 +343,7 @@ class RecipesTestCase(BaseTestCase):
             self.assertEqual(
                 response_data["message"],
                 "Recipe '{}' was successfully updated.".format(
-                    _clean_name(json.loads(test_recipe_update)['recipe_name'])
+                    _clean_name(json.loads(test_recipe_update)['name'])
                 )
             )
 

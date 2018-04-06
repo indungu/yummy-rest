@@ -2,7 +2,6 @@
 This Test suite houses the category endpoint tests
 """
 import json
-from app.helpers import _clean_name
 from .test_auth import BaseTestCase
 
 # Linting exceptions
@@ -30,7 +29,7 @@ class CategoryTestCase(BaseTestCase):
             ), data=test_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 201)
-            self.assertIn("category_name", response_data['categories'][0])
+            self.assertIn("name", response_data['categories'])
 
     def test_category_creation_invalid_name(self):
         """Ensures category cannot be created with an invalid name"""
@@ -47,26 +46,12 @@ class CategoryTestCase(BaseTestCase):
             ), data=invalid_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 422)
-            errors = response_data['errors']
+            errors = response_data['message']
             self.assertTrue(
-                'category_name' in errors
+                'name' in errors
             )
             self.assertEqual(
-                errors['category_name'][0], 'Name too short. Should be 3 or more characters.'
-            )
-            # Ensure that category name is of a valid format
-            response = self.client.post('/api/v1/category', headers=dict(
-                Authorization=access_token
-            ), data=invalid_category_2, content_type='application/json')
-            response_data = json.loads(response.data.decode())
-            self.assertEqual(response.status_code, 422)
-            errors = response_data['errors']
-            self.assertTrue(
-                'category_name' in errors
-            )
-            self.assertEqual(
-                errors['category_name'][0],
-                "Name should only contain letters, an underscore and/or a period."
+                errors['name'][0], 'Name too short. Should be 3 or more characters.'
             )
 
     def test_category_creation_invalid_description(self):
@@ -84,9 +69,9 @@ class CategoryTestCase(BaseTestCase):
             ), data=invalid_category, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 422)
-            errors = response_data['errors']
+            errors = response_data['message']
             self.assertTrue(
-                'category_name' in errors
+                'name' in errors
             )
             self.assertEqual(
                 errors['description'][0], 'Description should not be more than 50 characters long.'
@@ -97,7 +82,7 @@ class CategoryTestCase(BaseTestCase):
             ), data=invalid_category_2, content_type='application/json')
             response_data = json.loads(response.data.decode())
             self.assertEqual(response.status_code, 422)
-            errors = response_data['errors']
+            errors = response_data['message']
             self.assertTrue(
                 'description' in errors
             )
@@ -252,10 +237,9 @@ class CategoryTestCase(BaseTestCase):
             )
             self.assert200(response, "Categories not retrieved")
             response_data = json.loads(response.data.decode())
-            self.assertEqual(len(response_data['categories']), 1)
-            self.assertEqual(response_data['categories'][0]['category_name'], "cookies")
+            self.assertEqual(response_data['categories'][0]['name'], "Cookies")
             self.assertTrue('page_details' in response_data)
-            self.assertEqual(response_data['page_details']['pages'], 2)
+            self.assertEqual(response_data['page_details']['pages'], 1)
 
     def test_single_category_retrieval(self):
         """Ensures that a single category can be retrieved"""
@@ -277,7 +261,7 @@ class CategoryTestCase(BaseTestCase):
             )
             cat_create_resp_data = json.loads(cat_create_resp.data.decode())
             self.assertEqual(cat_create_resp.status_code, 201)
-            self.assertEqual(cat_create_resp_data['categories'][0]['category_id'], 1)
+            self.assertEqual(cat_create_resp_data['categories']['id'], 1)
 
             # Ensure that the resource is private
             # Attempt Access with no token
@@ -303,7 +287,7 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(response.status_code, 200)
             response_data = json.loads(response.data.decode())
             self.assertTrue(len(response_data['categories']) == 1)
-            self.assertEqual(response_data['categories'][0]['category_name'], "cookies")
+            self.assertEqual(response_data['categories'][0]['name'], "Cookies")
 
             # Attempt retrieval of non-existent category
             response = test_client.get(
@@ -333,7 +317,7 @@ class CategoryTestCase(BaseTestCase):
             )
             cat_create_resp_data = json.loads(cat_create_resp.data.decode())
             self.assertEqual(cat_create_resp.status_code, 201)
-            self.assertEqual(cat_create_resp_data['categories'][0]['category_id'], 1)
+            self.assertEqual(cat_create_resp_data['categories']['id'], 1)
 
             # Ensure that the resource is private
             # Attempt Access with no token
@@ -367,8 +351,8 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(
                 response_data['message'],
                 "Category '{}' was successfully updated to '{}'.".format(
-                    _clean_name(json.loads(test_category)['category_name']),
-                    _clean_name(json.loads(test_category_update)['category_name'])
+                    json.loads(test_category)['name'],
+                    json.loads(test_category_update)['name']
                 )
             )
 
@@ -383,7 +367,7 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(
                 response_data['message'],
                 "Category '{}' was successfully updated.".format(
-                    _clean_name(json.loads(test_category_update)['category_name'])
+                    json.loads(test_category_update)['name']
                 )
             )
 
@@ -416,7 +400,7 @@ class CategoryTestCase(BaseTestCase):
             )
             cat_create_resp_data = json.loads(cat_create_resp.data.decode())
             self.assertEqual(cat_create_resp.status_code, 201)
-            self.assertEqual(cat_create_resp_data['categories'][0]['category_id'], 1)
+            self.assertEqual(cat_create_resp_data['categories']['id'], 1)
 
             # Ensure that the resource is private
             # Attempt Access with no token
@@ -446,7 +430,7 @@ class CategoryTestCase(BaseTestCase):
             self.assertEqual(
                 response_data['message'],
                 "Category '{}' was deleted successfully.".format(
-                    _clean_name(json.loads(test_category)['category_name'])
+                    json.loads(test_category)['name']
                 )
             )
 

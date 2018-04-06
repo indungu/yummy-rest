@@ -83,7 +83,7 @@ class LoginHandler(Resource):
                 return make_response(jsonify({"message": 'User does not exist!'}), 404)
             if check_password_hash(user.password, login_info['password']):
                 payload = {
-                    'exp':  datetime.utcnow() + timedelta(minutes=30),
+                    'exp':  datetime.utcnow() + timedelta(weeks=3),
                     'iat': datetime.utcnow(),
                     'sub': user.public_id
                 }
@@ -92,9 +92,10 @@ class LoginHandler(Resource):
                     APP.config['SECRET_KEY'],
                     algorithm='HS256'
                 )
+                print(user.username)
                 return jsonify({"message": "Logged in successfully.",
                                 "access_token": token.decode('UTF-8'),
-                                "public_id": user.public_id
+                                "username": user.username
                                })
             return make_response(jsonify({"message": "Incorrect credentials."}), 401)
         except Exception as e:

@@ -1,6 +1,8 @@
 """Main APP module"""
+import os
 from flask import Flask, make_response, jsonify, redirect
 from flask_sqlalchemy import SQLAlchemy
+from flask_cors import CORS
 
 # Linting exception
 # pylint: disable=C0103
@@ -13,8 +15,10 @@ from instance.config import app_config
 # initialize sql-alchemy
 db = SQLAlchemy()
 
+# Get the instance config to use
+config_name = os.environ.get("APP_CONFIG", "production")
 APP = Flask(__name__, instance_relative_config=True)
-APP.config.from_object(app_config['development'])
+APP.config.from_object(app_config[config_name])
 
 # overide 404 error handler
 
@@ -50,3 +54,4 @@ API.add_namespace(auth_ns)
 API.add_namespace(categories_ns)
 API.add_namespace(recipes_ns)
 API.init_app(APP)
+CORS(APP)

@@ -52,16 +52,16 @@ class CategoryHandler(Resource):
         request_payload, errors = category_schema.load(request_payload)
 
         if errors:
-            return make_response(jsonify(dict(errors=errors)), 422)
+            return make_response(jsonify(dict(message=errors)), 422)
 
-        category_name = _clean_name(request_payload['category_name'])
+        category_name = _clean_name(request_payload['name'])
 
         # check if category exists
         existing_category = current_user.categories.filter_by(
-            name=category_name
+            name=request_payload['name']
         ).first()
         if not existing_category:
-            name = category_name
+            name = request_payload['name']
             owner = current_user.id
             description = request_payload['description']
 
@@ -71,13 +71,13 @@ class CategoryHandler(Resource):
                 db.session.add(new_category)
                 db.session.commit()
                 response_payload = {
-                    "categories": [make_payload(category=new_category)]
+                    "categories": make_payload(category=new_category)
                 }
                 response_payload = jsonify(response_payload)
                 return make_response(response_payload, 201)
-            except:
+            except Exception as e:
                 response_payload = dict(
-                    message="Some error occured. Please try again later."
+                    message=str(e)
                 )
                 response_payload = jsonify(response_payload)
                 return make_response(response_payload, 501)
@@ -95,14 +95,14 @@ class CategoryHandler(Resource):
         if not current_user:
             return is_unauthorized()
 
-        if not current_user.categories.all():
+        if not current_user.categories.order_by(Category.id).all():
             return make_response( \
         jsonify({'message': 'No categories exist. Please create some.'}))
         # parse args if provided
         args = parser.parse(SEARCH_PAGE_ARGS, request)
         if 'q' in args: # pragma: no cover
             try:
-                all_categories = current_user.categories.filter(
+                all_categories = current_user.categories.order_by(Category.id).filter(
                     Category.name.ilike("%" + args['q'] + "%")
                 ).paginate(page=args['page'], per_page=args['per_page'], error_out=False)
             except KeyError:
@@ -110,7 +110,7 @@ class CategoryHandler(Resource):
                     Category.name.ilike("%" + args['q'] + "%")
                 ).paginate(page=1, per_page=5)
         else:
-            all_categories = current_user.categories.paginate(error_out=False)
+            all_categories = current_user.categories.order_by(Category.id).paginate(per_page=5)
         base_url = request.base_url
         if 'q' in args: # pragma: no cover
             pagination_details = _pagination(all_categories, base_url, q=args['q'])            
@@ -125,11 +125,11 @@ class CategoryHandler(Resource):
                 "categories": categories,
                 "page_details": pagination_details
             }
-        else:
-            response_payload = {
-                "message": "Page does not exist."
-            }
-        return make_response(jsonify(response_payload), 200)
+            return make_response(jsonify(response_payload), 200)
+        response_payload = {
+            "message": "Category does not exist."
+        }
+        return make_response(jsonify(response_payload), 400)
         
 
 @categories_ns.route('/<int:id>')
@@ -183,11 +183,11 @@ class SingleCategoryResource(Resource):
             # Get request data
             request_payload = request.get_json()
             # format new name
-            new_category_name = _clean_name(request_payload['category_name'])
+            new_category_name = request_payload['name']
             # Ensure the category name does not match that any of the user's
             # existing category apart from the one they are editing
             existing_category = current_user.categories.filter(
-                Category.name == _clean_name(request_payload['category_name']),
+                Category.name == new_category_name,
                 Category.id != specified_category.id
             ).first()
 
