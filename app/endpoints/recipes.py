@@ -55,7 +55,7 @@ class GeneralRecipesHandler(Resource):
             return is_unauthorized()
 
         request_payload = request.get_json()
-        request_payload['recipe_name'] = _clean_name(request_payload['recipe_name'])
+        request_payload['name'] = _clean_name(request_payload['name'])
         # initialize schema object for input validation
         recipe_schema = RecipeSchema()
         # Validate input
@@ -70,14 +70,14 @@ class GeneralRecipesHandler(Resource):
         category = current_user.categories.filter_by(id=category_id).first()
         if category:
             new_recipe = Recipe(
-                name=request_payload['recipe_name'],
+                name=request_payload['name'],
                 category_id=category_id,
                 user_id=current_user.id,
                 ingredients=request_payload['ingredients'],
                 description=request_payload['description']
             )
             existing_recipe = category.recipes.filter_by(
-                name=request_payload['recipe_name']
+                name=request_payload['name']
             ).first()
             if not existing_recipe:
                 db.session.add(new_recipe)
@@ -121,7 +121,7 @@ class GeneralRecipesHandler(Resource):
                     message='No recipes added to this category yet!'
                 )
                 response_payload = jsonify(response_payload)
-                return make_response(response_payload, 200)
+                return make_response(response_payload, 404)
 
             # search and/or paginate
             args = parser.parse(SEARCH_PAGE_ARGS, request)
@@ -137,7 +137,7 @@ class GeneralRecipesHandler(Resource):
                         Recipe.category_id == category.id
                     ).paginate(page=1, per_page=5)
             else:
-                recipes = category.recipes.paginate(error_out=False)
+                recipes = category.recipes.paginate(per_page=2)
             base_url = request.base_url
             if 'q' in args:
                 pagination_details = _pagination(recipes, base_url, q=args['q'])
@@ -152,12 +152,11 @@ class GeneralRecipesHandler(Resource):
                     "recipes": user_recipes,
                     "page_details": pagination_details
                 }
-            else:
-                response_payload = {
-                    "message": "Page does not exist."
-                }
-            response_payload = jsonify(response_payload)
-            return make_response(response_payload, 200)
+                return make_response(jsonify(response_payload), 200)
+            response_payload = {
+                "message": "Recipe does not exist."
+            }
+            return make_response(jsonify(response_payload), 400)
         response_payload = dict(
             message='Invalid category!'
         )
@@ -227,7 +226,7 @@ class SingleRecipeHandler(Resource):
                 return _does_not_exist()
             # Get request data
             request_payload = request.get_json()
-            new_recipe_name = _clean_name(request_payload['recipe_name'])
+            new_recipe_name = _clean_name(request_payload['name'])
             # Check if name provided is of an existing recipe
             existing_recipe = current_user.recipes.filter(
                 Recipe.name == new_recipe_name,
@@ -259,7 +258,8 @@ class SingleRecipeHandler(Resource):
                     response_payload = {
                         "message": "Recipe '{}' was successfully updated.".format(
                             selected_recipe.name
-                        )
+                        ),
+                        "recipe": make_payload(recipe=selected_recipe)
                     }
                 response_payload = jsonify(response_payload)
                 return make_response(response_payload, 200)

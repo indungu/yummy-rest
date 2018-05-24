@@ -123,18 +123,18 @@ def make_payload(category=None, recipe=None):
     """Returns an appropriate response payload"""
     if recipe:
         return dict(
-                    recipe_id=recipe.id,
-                    recipe_name=recipe.name,
-                    recipe_ingredients=recipe.ingredients,
-                    recipe_description=recipe.description,
+                    id=recipe.id,
+                    name=recipe.name,
+                    ingredients=recipe.ingredients,
+                    description=recipe.description,
                     date_created=recipe.created_on,
                     date_updated=recipe.updated_on,
                     category_id=recipe.category_id
                    )
     if category:
         return dict(
-                    category_id=category.id,
-                    category_name= category.name,
+                    id=category.id,
+                    name= category.name,
                     description= category.description,
                     date_created= category.created_on,
                     date_updated= category.updated_on

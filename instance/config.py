@@ -10,13 +10,13 @@ import os
 # pylint: disable=E1101
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-postgres_local_base = 'postgresql://localhost/'
-database_name = 'yummy_rest'
+database_url = os.environ.get('DATABASE_URL', 'postgresql://localhost/')
+database_name = os.environ.get('DATABASE_NAME', 'yummy_rest')
 
 class BaseConfig:
     """Base configuration."""
     # Flask APP configs
-    SECRET_KEY = "\xe6.]`\x99\x07\x1ap\xff\xb7c\xf0\xea*\xba{"
+    SECRET_KEY = os.environ.get("SECRET_KEY", "\xe6.]`\x99\x07\x1ap\xff\xb7c\xf0\xea*\xba{")
     DEBUG = False
     # SQLAlchemy configs
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -30,14 +30,14 @@ class BaseConfig:
 class DevelopmentConfig(BaseConfig):
     """Development configuration."""
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = postgres_local_base + database_name
+    SQLALCHEMY_DATABASE_URI = database_url + database_name
 
 
 class TestingConfig(BaseConfig):
     """Testing configuration."""
     DEBUG = True
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = postgres_local_base + database_name + '_test'
+    SQLALCHEMY_DATABASE_URI = database_url + database_name + '_test'
     PRESERVE_CONTEXT_ON_EXCEPTION = False
 
 
@@ -45,7 +45,7 @@ class ProductionConfig(BaseConfig):
     """Production configuration."""
     SECRET_KEY = 'my_precious'
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = 'postgresql:///example'
+    SQLALCHEMY_DATABASE_URI = database_url
 
 app_config = {
     'development': DevelopmentConfig,
