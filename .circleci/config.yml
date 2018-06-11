@@ -11,7 +11,7 @@ jobs:
       - image: circleci/python:3.6.1
         environment:
           APP_CONFIG: testing
-          DATABASE_URL: postgreql://circleci@localhost/circleci
+          DATABASE_URL: postgreql://circleci@localhost/
           PGHOST: localhost
           PGUSER: circleci
 
