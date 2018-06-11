@@ -14,6 +14,7 @@ jobs:
           POSTGRES_USER: circleci
           POSTGRES_DB: circleci
           POSTGRES_PASSWORD: ''
+          DATABASE_URL: postgreql://circleci@localhost/circleci
       
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images

@@ -37,7 +37,7 @@ class TestingConfig(BaseConfig):
     """Testing configuration."""
     DEBUG = True
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = database_url
+    SQLALCHEMY_DATABASE_URI = database_url + database_name + '_test'
     PRESERVE_CONTEXT_ON_EXCEPTION = False
 
 
