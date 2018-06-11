@@ -9,12 +9,17 @@ jobs:
       # specify the version you desire here
       # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
       - image: circleci/python:3.6.1
+        environment:
+          APP_CONFIG: testing
+          DATABASE_URL: postgreql://circleci@localhost/circleci
+          PGHOST: localhost
+          PGUSER: circleci
+
       - image: circleci/postgres:9.4
         environment:
           POSTGRES_USER: circleci
-          POSTGRES_DB: circleci
+          POSTGRES_DB: yummy_rest_test
           POSTGRES_PASSWORD: ''
-          DATABASE_URL: postgreql://circleci@localhost/circleci
       
       # Specify service dependencies here if necessary
       # CircleCI maintains a library of pre-built images
