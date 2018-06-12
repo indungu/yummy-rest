@@ -9,6 +9,7 @@ default: &default_setup
         APP_CONFIG: testing
         PGHOST: localhost
         PGUSER: circleci
+        cc_TEST_REPORTER_ID: ${CC_TEST_REPORTER_ID}
 
     - image: circleci/postgres:9.4
       environment:
@@ -39,6 +40,19 @@ cmd_install_dependecies: &cmd_install_dependecies
           . venv/bin/activate
           pip install -r requirements.txt
 
+# Add CC Test Reporter
+cmd_add_cc_cov_reporter: &cmd_add_cc_cov_reporter
+  run:
+    name:  Download cc-test-reporter
+    command: |
+      mkdir -p tmp/
+      curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./tmp/cc-test-reporter
+      chmod +x ./tmp/cc-test-reporter
+  # persist_to_workspace:
+  #   root: tmp
+  #   paths:
+  #     - cc-test-reporter
+          
 # save cached dependencies
 cmd_save_cache_dependecies: &cmd_save_cache_dependecies
     save_cache:
@@ -79,21 +93,38 @@ jobs:
     <<: *default_setup
     steps:
       - checkout
+      - attach_workspace:
+          at: ~/repo/tmp
       # Download and cache dependencies
       - *cmd_restore_cache_dependecies
       - *cmd_install_dependecies
       - *cmd_save_cache_dependecies
       # run db migrations
       - *cmd_run_db_migrations
+      # Add CC_TEST_REPORTER
+      - *cmd_add_cc_cov_reporter
       - run:
           name: run tests
           command: |
             . venv/bin/activate
             pytest --cov=app/ tests
 
-      - store_artifacts:
-          path: test-reports
-          destination: test-reports
+      - persist_to_workspace:
+          root: tmp
+          paths:
+            - codeclimate.tests.json
+
+# Upload coverage
+upload-coverage:
+  <<: *default_setup
+  steps:
+    - attach_workspace:
+        at: ~/repo/tmp
+    - run:
+        name: Upload coverage results to Code Climate
+        command: |
+          ./tmp/cc-test-reporter upload-coverage -i tmp/codeclimate.tests.json
+
 
 workflows:
   version: 2
@@ -103,3 +134,6 @@ workflows:
       - run_tests:
           requires:
             - build
+      - upload-coverage:
+          requires:
+            - run_tests
