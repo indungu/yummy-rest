@@ -9,7 +9,7 @@ default: &default_setup
         APP_CONFIG: testing
         PGHOST: localhost
         PGUSER: circleci
-        cc_TEST_REPORTER_ID: ${CC_TEST_REPORTER_ID}
+        CC_TEST_REPORTER_ID: ${CC_TEST_REPORTER_ID}
 
     - image: circleci/postgres:9.4
       environment:
