@@ -108,8 +108,8 @@ jobs:
           name: run tests
           command: |
             . venv/bin/activate
-            pytest --cov=app/ tests
-            ./tmp/cc-test-reporter format-coverage .coverage --input-type "coverage.py" --output "tmp/codeclimate.tests.json" --prefix "/home/circleci/repo/tmp"
+            pytest --cov=app/ tests --cov-report xml
+            ./tmp/cc-test-reporter format-coverage coverage.xml -t "coverage.py" -o "tmp/codeclimate.tests.json" -p "/home/circleci/repo/tmp"
 
       - persist_to_workspace:
           root: tmp
