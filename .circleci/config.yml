@@ -48,10 +48,6 @@ cmd_add_cc_cov_reporter: &cmd_add_cc_cov_reporter
       mkdir -p tmp/
       curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./tmp/cc-test-reporter
       chmod +x ./tmp/cc-test-reporter
-  # persist_to_workspace:
-  #   root: tmp
-  #   paths:
-  #     - cc-test-reporter
           
 # save cached dependencies
 cmd_save_cache_dependecies: &cmd_save_cache_dependecies
@@ -85,6 +81,11 @@ jobs:
       - *cmd_save_cache_dependecies
       # run db migrations
       - *cmd_run_db_migrations
+      - *cmd_add_cc_cov_reporter
+      - persist_to_workspace:
+          root: tmp
+          paths:
+            - cc-test-reporter
 
 
         
@@ -108,6 +109,7 @@ jobs:
           command: |
             . venv/bin/activate
             pytest --cov=app/ tests
+            ./tmp/cc-test-reporter format-coverage -t lcov -o tmp/codeclimate.tests.json coverage/lcov.info
 
       - persist_to_workspace:
           root: tmp
