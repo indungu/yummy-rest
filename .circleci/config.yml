@@ -1,0 +1,141 @@
+# Python CircleCI 2.0 configuration file
+
+default: &default_setup
+  docker:
+    # specify the version you desire here
+    # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
+    - image: circleci/python:3.6.1
+      environment:
+        APP_CONFIG: testing
+        PGHOST: localhost
+        PGUSER: circleci
+        CC_TEST_REPORTER_ID: ${CC_TEST_REPORTER_ID}
+
+    - image: circleci/postgres:9.4
+      environment:
+        POSTGRES_USER: circleci
+        POSTGRES_DB: yummy_rest_test
+        POSTGRES_PASSWORD: ''
+    
+    # Specify service dependencies here if necessary
+    # CircleCI maintains a library of pre-built images
+    # documented at https://circleci.com/docs/2.0/circleci-images/
+  working_directory: ~/repo
+
+# Download and cache dependencies
+# restore cached dependencies
+cmd_restore_cache_dependecies: &cmd_restore_cache_dependecies
+    restore_cache:
+        keys:
+        - v1-dependencies-{{ checksum "requirements.txt" }}
+        # fallback to using the latest cache if no exact match is found
+        - v1-dependencies-
+
+# Install dependencies
+cmd_install_dependecies: &cmd_install_dependecies
+    run:
+        name: install dependencies
+        command: |
+          python3 -m venv venv
+          . venv/bin/activate
+          pip install -r requirements.txt
+
+# Add CC Test Reporter
+cmd_add_cc_cov_reporter: &cmd_add_cc_cov_reporter
+  run:
+    name:  Download cc-test-reporter
+    command: |
+      mkdir -p tmp/
+      curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./tmp/cc-test-reporter
+      chmod +x ./tmp/cc-test-reporter
+          
+# save cached dependencies
+cmd_save_cache_dependecies: &cmd_save_cache_dependecies
+    save_cache:
+        paths:
+          - ./venv
+        key: v1-dependencies-{{ checksum "requirements.txt" }}
+
+# Run database migrations
+cmd_run_db_migrations: &cmd_run_db_migrations
+  run:
+    name: migrate database
+    command: |
+      . venv/bin/activate
+      python manage.py db init
+      python manage.py db migrate
+      python manage.py db upgrade
+
+# Jobs description
+version: 2
+jobs:
+  build:
+    <<: *default_setup
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - *cmd_restore_cache_dependecies
+      - *cmd_install_dependecies
+      - *cmd_save_cache_dependecies
+      # run db migrations
+      - *cmd_run_db_migrations
+      - *cmd_add_cc_cov_reporter
+      - persist_to_workspace:
+          root: tmp
+          paths:
+            - cc-test-reporter
+
+
+        
+  # run tests!
+  run_tests:
+    <<: *default_setup
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/repo/tmp
+      # Download and cache dependencies
+      - *cmd_restore_cache_dependecies
+      - *cmd_install_dependecies
+      - *cmd_save_cache_dependecies
+      # run db migrations
+      - *cmd_run_db_migrations
+      # Add CC_TEST_REPORTER
+      - *cmd_add_cc_cov_reporter
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            pytest --cov=app/ tests --cov-report xml
+            ./tmp/cc-test-reporter format-coverage coverage.xml -t "coverage.py" -o "tmp/codeclimate.tests.json" -p "/home/circleci/repo/tmp"
+
+      - persist_to_workspace:
+          root: tmp
+          paths:
+            - codeclimate.tests.json
+
+  # Upload coverage
+  upload-coverage:
+    <<: *default_setup
+    steps:
+      - attach_workspace:
+          at: ~/repo/tmp
+      - run:
+          name: Upload coverage results to Code Climate
+          command: |
+            ./tmp/cc-test-reporter upload-coverage -i tmp/codeclimate.tests.json
+
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
+      - run_tests:
+          requires:
+            - build
+      - upload-coverage:
+          requires:
+            - run_tests

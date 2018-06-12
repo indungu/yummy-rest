@@ -1,0 +1,99 @@
+default: &defaults
+  docker:
+      - image: gcr.io/${GCLOUD_ACTIVO_PROJECT}/activo-api-ci-image
+        auth:
+          username: _json_key
+          password: '${SERVICE_ACCOUNT}'
+        environment:
+          ACTIVO_PATH: /home/circleci/activo-api
+          CC_TEST_REPORTER_ID: ${CC_TEST_REPORTER_ID}
+          FLASK_ENV: testing
+          FLASK_APP: manage.py
+          PGUSER: circleci
+          PG_HOST: localhost
+          DATABASE_URI: postgresql://circleci@localhost/circlecidb
+      - image: postgres:9.6
+        environment:
+          POSTGRES_USER: circleci
+          POSTGRES_DB: activo_test
+          POSTGRES_PASSWORD: ''
+  # specify working directory
+  working_directory: ~/activo-api
+
+cmd_wait_for_postgres: &cmd_wait_for_postgres
+  run:
+    name: Waiting for Postgres to be ready
+    command: |
+      dockerize -wait tcp://localhost:5432 -timeout 1m
+cmd_install_dependencies: &cmd_install_dependencies
+  run:
+    name: Install dependencies
+    command: |
+      python3 -m venv venv
+      . venv/bin/activate
+      pip install -r requirements.txt
+
+cmd_save_cache: &cmd_save_cache
+    save_cache:
+        key: api-dependencies-{{ checksum "requirements.txt" }}
+        paths:
+          - ./venv
+
+cmd_restore_cache: &cmd_restore_cache
+    restore_cache:
+        keys:
+          - api-dependencies-{{ checksum "requirements.txt" }}
+          # fallback to using the latest cache if no exact match is found
+          - api-dependencies-
+
+cmd_download_cc_test_reporter: &cmd_download_cc_test_reporter
+  run:
+    name:  Download cc-test-reporter
+    command: |
+      mkdir -p tmp/
+      curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > /tmp/cc-test-reporter
+      chmod +x /tmp/cc-test-reporter  
+
+cmd_attach_workspace: &cmd_attach_workspace
+  attach_workspace:
+    at: tmp/  
+
+# Python CircleCI 2.0 configuration file
+version: 2
+jobs:
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - *cmd_install_dependencies
+      - *cmd_save_cache
+      - *cmd_wait_for_postgres
+      - run:
+          name: Set up database
+          command: |
+            . venv/bin/activate
+            # flask db init
+            # flask db migrate
+            flask db upgrade
+  run_tests:
+    <<: *defaults
+    steps:
+      - checkout
+      - *cmd_install_dependencies
+      - *cmd_save_cache
+      - *cmd_wait_for_postgres
+      - *cmd_restore_cache
+      - run:
+          name: Run tests
+          command: |
+            . venv/bin/activate
+            pytest
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
+      - run_tests:
+          requires:
+            - build
