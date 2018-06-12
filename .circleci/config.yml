@@ -21,7 +21,42 @@ default: &default_setup
     # documented at https://circleci.com/docs/2.0/circleci-images/
   working_directory: ~/repo
 
-#
+# Download and cache dependencies
+# restore cached dependencies
+cmd_restore_cache_dependecies: &cmd_restore_cache_dependecies
+    restore_cache:
+        keys:
+        - v1-dependencies-{{ checksum "requirements.txt" }}
+        # fallback to using the latest cache if no exact match is found
+        - v1-dependencies-
+
+# Install dependencies
+cmd_install_dependecies: &cmd_install_dependecies
+    run:
+        name: install dependencies
+        command: |
+          python3 -m venv venv
+          . venv/bin/activate
+          pip install -r requirements.txt
+
+# save cached dependencies
+cmd_save_cache_dependecies: &cmd_save_cache_dependecies
+    save_cache:
+        paths:
+          - ./venv
+        key: v1-dependencies-{{ checksum "requirements.txt" }}
+
+# Run database migrations
+cmd_run_db_migrations: &cmd_run_db_migrations
+  run:
+    name: migrate database
+    command: |
+      . venv/bin/activate
+      python manage.py db init
+      python manage.py db migrate
+      python manage.py db upgrade
+
+# Jobs description
 version: 2
 jobs:
   build:
@@ -31,39 +66,25 @@ jobs:
       - checkout
 
       # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
-      - run:
-          name: install dependencies
-          command: |
-            python3 -m venv venv
-            . venv/bin/activate
-            pip install -r requirements.txt
+      - *cmd_restore_cache_dependecies
+      - *cmd_install_dependecies
+      - *cmd_save_cache_dependecies
+      # run db migrations
+      - *cmd_run_db_migrations
 
 
-      - save_cache:
-          paths:
-            - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}
-
-      # Run database migrations
-      - run:
-          name: migrate database
-          command: |
-            . venv/bin/activate
-            python manage.py db init
-            python manage.py db migrate
-            python manage.py db upgrade
         
   # run tests!
   run_tests:
     <<: *default_setup
     steps:
       - checkout
+      # Download and cache dependencies
+      - *cmd_restore_cache_dependecies
+      - *cmd_install_dependecies
+      - *cmd_save_cache_dependecies
+      # run db migrations
+      - *cmd_run_db_migrations
       - run:
           name: run tests
           command: |
