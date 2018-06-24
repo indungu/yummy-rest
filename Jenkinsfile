@@ -4,7 +4,9 @@ pipeline {
     stage('Build') {
       steps {
         echo 'Building..'
-        sh 'pip install -r reqiurements.txt'
+        sh '''python3 -m venv venv
+source venv/bin/activate
+pip install -r reqiurements.txt'''
       }
     }
     stage('Test') {
