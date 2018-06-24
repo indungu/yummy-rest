@@ -1,23 +1,22 @@
-// A declarative pipeline for the YummyREST API
-
 pipeline {
-    agent any
-
-    stages {
-        stage('Build') {
-            steps {
-                echo 'Building..'
-            }
-        }
-        stage('Test') {
-            steps {
-                echo 'Testing..'
-            }
-        }
-        stage('Deploy') {
-            steps {
-                echo 'Deploying....'
-            }
-        }
+  agent any
+  stages {
+    stage('Build') {
+      steps {
+        echo 'Building..'
+        sh 'pip install -r reqiurements.txt'
+      }
     }
+    stage('Test') {
+      steps {
+        echo 'Testing..'
+        sh 'pytest'
+      }
+    }
+    stage('Deploy') {
+      steps {
+        echo 'Deploying....'
+      }
+    }
+  }
 }
